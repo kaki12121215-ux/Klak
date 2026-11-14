@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Klak">
+<meta name="theme-color" content="#1C1A18">
+<title>Klak</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icons/icono_180.png">
+<link rel="icon" type="image/png" href="icons/icono_192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Courier+Prime:wght@400;700&family=Lora:ital,wght@0,400;0,500;0,600;1,500;1,600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/klak.css">
+</head>
+<body>
+
+<!-- ============ CAJA ============ -->
+<section id="vCaja" class="view active">
+  <header class="cj-top">
+    <div class="logo">Klak</div>
+    <div class="cj-btns">
+      <button class="circ" id="btnBuscar" aria-label="Buscar"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.5"/><path d="M16 16l4.5 4.5"/></svg></button>
+      <button class="circ" id="btnPapelera" aria-label="Papelera"><svg viewBox="0 0 24 24"><path d="M4 7h16M9 7V4.5h6V7M6.5 7l1 13h9l1-13"/></svg></button>
+      <button class="circ" id="btnAjustes" aria-label="Ajustes"><svg viewBox="0 0 24 24"><path d="M4 7h10M18 7h2M4 17h4M12 17h8"/><circle cx="16" cy="7" r="2"/><circle cx="10" cy="17" r="2"/></svg></button>
+    </div>
+  </header>
+  <div class="cj-search" id="cjSearch"><input id="inBuscar" type="search" placeholder="Buscar en tus hojas" autocomplete="off"><button id="btnBuscarCerrar">Cerrar</button></div>
+  <nav class="tabs" id="tabs"></nav>
+  <main class="cj-box" id="cjBox"></main>
+  <footer class="cj-foot"><button class="newb" id="btnNueva"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg><span>Nueva hoja</span></button></footer>
+</section>
+
+<!-- ============ ESCRIBIR ============ -->
+<section id="vEditor" class="view">
+  <header class="ed-top">
+    <button class="circ dark" id="btnVolver" aria-label="Volver"><svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg></button>
+    <button class="ed-count" id="edCount"></button>
+    <div class="ed-right">
+      <button class="circ dark" id="btnAspecto" aria-label="Aspecto de la hoja"><svg viewBox="0 0 24 24"><circle cx="7.5" cy="8" r="3.2"/><circle cx="16.5" cy="8" r="3.2"/><circle cx="12" cy="16.5" r="3.2"/></svg></button>
+      <button class="circ dark" id="btnCompartir" aria-label="Exportar"><svg viewBox="0 0 24 24"><path d="M12 3v12M7.5 7.5L12 3l4.5 4.5"/><path d="M5 12v8h14v-8"/></svg></button>
+      <button class="circ dark" id="btnLampara" aria-label="Lámpara"><svg viewBox="0 0 24 24"><path d="M7 4h10l3 7H4z"/><path d="M12 11v7"/><path d="M8 20h8"/></svg></button>
+    </div>
+  </header>
+  <div class="ed-zone" id="edZone">
+    <div class="ed-scroll" id="edScroll"><div class="ed-sheets" id="edSheets"></div></div>
+    <div class="ed-guide" id="edGuide"><div class="ed-scale" id="edScale"></div><div class="ed-pointer" id="edPointer"></div></div>
+    <div class="ed-ribbon" id="edRibbon"><img class="rb-rest" src="img/guia_reposo.png" alt=""><img class="rb-hit" src="img/guia_golpe.png" alt=""></div>
+    <div class="ed-type" id="edType"><img src="img/tipo.png" alt=""></div>
+    <div class="lamp-light" id="lampLight"></div>
+    <div class="ed-hint" id="edHint"></div>
+  </div>
+  <div class="ed-roll"></div>
+  <div class="ed-kb" id="edKb"><div class="kb-plate"></div><div class="kb-rows" id="kbRows"></div></div>
+  <textarea id="iosInput" autocapitalize="sentences" autocomplete="off" autocorrect="on" spellcheck="false" aria-label="Escribir"></textarea>
+  <div class="accent-pop" id="accentPop"></div>
+</section>
+
+<!-- ============ AJUSTES ============ -->
+<section id="vAjustes" class="view">
+  <header class="sub-top"><button class="circ" id="btnAjVolver" aria-label="Volver"><svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg></button><div class="logo sm">Ajustes</div><span class="sp40"></span></header>
+  <main class="set" id="setBody"></main>
+</section>
+
+<!-- ============ PAPELERA ============ -->
+<section id="vPapelera" class="view">
+  <header class="sub-top"><button class="circ" id="btnPpVolver" aria-label="Volver"><svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg></button><div class="logo sm">Papelera</div><span class="sp40"></span></header>
+  <main class="pp-body" id="ppBody"></main>
+</section>
+
+<!-- ============ HOJAS (diálogos) ============ -->
+<div class="dim" id="dim"></div>
+<div class="sheet-ui" id="sheetUI"></div>
+
+<!-- Zona de impresión / PDF -->
+<div id="printArea"></div>
+<style id="printPage"></style>
+
+<script src="js/klak.js"></script>
+</body>
+</html>

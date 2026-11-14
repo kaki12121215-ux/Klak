@@ -1,0 +1,132 @@
+/* Klak · service worker · versión 1.0.1 */
+const CACHE = 'klak-1.0.1';
+const FILES = [
+  './',
+  './css/klak.css',
+  './icons/icono_180.png',
+  './icons/icono_192.png',
+  './icons/icono_512.png',
+  './img/espacio.png',
+  './img/espacio_azul.png',
+  './img/espacio_burdeos.png',
+  './img/espacio_celeste.png',
+  './img/espacio_lavanda.png',
+  './img/espacio_madera.png',
+  './img/espacio_mantequilla.png',
+  './img/espacio_marfil.png',
+  './img/espacio_menta.png',
+  './img/espacio_mostaza.png',
+  './img/espacio_petroleo.png',
+  './img/espacio_piedra.png',
+  './img/espacio_rojo.png',
+  './img/espacio_rosa.png',
+  './img/espacio_terracota.png',
+  './img/espacio_verde.png',
+  './img/guia_golpe.png',
+  './img/guia_reposo.png',
+  './img/marco.png',
+  './img/mesa_lino.jpg',
+  './img/mesa_nogal.jpg',
+  './img/mesa_roble.jpg',
+  './img/papel_carta.jpg',
+  './img/papel_crema.jpg',
+  './img/papel_hueso.jpg',
+  './img/papel_kraft.jpg',
+  './img/papel_manila.jpg',
+  './img/papel_niebla.jpg',
+  './img/placa_azul.png',
+  './img/placa_burdeos.png',
+  './img/placa_celeste.png',
+  './img/placa_lavanda.png',
+  './img/placa_madera.png',
+  './img/placa_mantequilla.png',
+  './img/placa_marfil.png',
+  './img/placa_menta.png',
+  './img/placa_mostaza.png',
+  './img/placa_petroleo.png',
+  './img/placa_piedra.png',
+  './img/placa_rojo.png',
+  './img/placa_rosa.png',
+  './img/placa_terracota.png',
+  './img/placa_verde.png',
+  './img/rodillo.png',
+  './img/tecla.png',
+  './img/tecla_azul.png',
+  './img/tecla_burdeos.png',
+  './img/tecla_celeste.png',
+  './img/tecla_larga.png',
+  './img/tecla_larga_azul.png',
+  './img/tecla_larga_burdeos.png',
+  './img/tecla_larga_celeste.png',
+  './img/tecla_larga_lavanda.png',
+  './img/tecla_larga_madera.png',
+  './img/tecla_larga_mantequilla.png',
+  './img/tecla_larga_marfil.png',
+  './img/tecla_larga_menta.png',
+  './img/tecla_larga_mostaza.png',
+  './img/tecla_larga_petroleo.png',
+  './img/tecla_larga_piedra.png',
+  './img/tecla_larga_rojo.png',
+  './img/tecla_larga_rosa.png',
+  './img/tecla_larga_terracota.png',
+  './img/tecla_larga_verde.png',
+  './img/tecla_lavanda.png',
+  './img/tecla_madera.png',
+  './img/tecla_mantequilla.png',
+  './img/tecla_marfil.png',
+  './img/tecla_menta.png',
+  './img/tecla_mostaza.png',
+  './img/tecla_petroleo.png',
+  './img/tecla_piedra.png',
+  './img/tecla_rojo.png',
+  './img/tecla_rosa.png',
+  './img/tecla_terracota.png',
+  './img/tecla_verde.png',
+  './img/tipo.png',
+  './index.html',
+  './js/klak.js',
+  './manifest.webmanifest',
+  './snd/borrar.mp3',
+  './snd/campanilla.mp3',
+  './snd/cargar_hoja.mp3',
+  './snd/espacio.mp3',
+  './snd/lampara.mp3',
+  './snd/mayus.mp3',
+  './snd/retorno.mp3',
+  './snd/tecla_01.mp3',
+  './snd/tecla_02.mp3',
+  './snd/tecla_03.mp3',
+  './snd/tecla_04.mp3',
+  './snd/tecla_05.mp3',
+  './snd/tecla_06.mp3',
+  './snd/tecla_07.mp3',
+  './snd/tecla_08.mp3',
+  './snd/tecla_09.mp3',
+  './snd/tecla_10.mp3',
+  './snd/tecla_11.mp3',
+  './snd/tecla_12.mp3',
+  './snd/tecla_13.mp3',
+  './snd/tecla_14.mp3',
+  './snd/tecla_15.mp3',
+  './snd/tecla_16.mp3'
+];
+self.addEventListener('install', e => {
+  e.waitUntil(caches.open(CACHE).then(c => c.addAll(FILES)).then(() => self.skipWaiting()));
+});
+self.addEventListener('activate', e => {
+  e.waitUntil(caches.keys().then(ks => Promise.all(ks.filter(k => k !== CACHE).map(k => caches.delete(k)))).then(() => self.clients.claim()));
+});
+self.addEventListener('fetch', e => {
+  if (e.request.method !== 'GET') return;
+  e.respondWith(
+    caches.match(e.request).then(hit => hit || fetch(e.request).then(res => {
+      const u = e.request.url;
+      if (res.ok || res.type === 'opaque') {
+        if (u.includes('fonts.googleapis.com') || u.includes('fonts.gstatic.com') || u.startsWith(self.location.origin)) {
+          const copy = res.clone(); caches.open(CACHE).then(c => c.put(e.request, copy));
+        }
+      }
+      return res;
+    }).catch(() => caches.match('./index.html')))
+  );
+});
