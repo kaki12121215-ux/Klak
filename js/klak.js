@@ -1,8 +1,8 @@
 /* Klak · máquina de escribir para notas y diario
-   Versión 1.0.3 */
+   Versión 1.0.4 */
 (function () {
 'use strict';
-const VERSION = '1.0.3';
+const VERSION = '1.0.4';
 const $ = (s, r = document) => r.querySelector(s);
 const $$ = (s, r = document) => Array.from(r.querySelectorAll(s));
 const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
@@ -843,7 +843,29 @@ function printNote(n, name) {
 
 /* ================= INICIO ================= */
 applyLook();
-renderCaja(true);
+renderCaja(false);
+/* animación de inicio: completa la primera vez de cada día; si no, un fundido */
+(function intro() {
+  const el = $('#kIntro'); if (!el) return;
+  const hoy = new Date().toDateString();
+  let full = false;
+  try { full = localStorage.getItem('klak.intro') !== hoy && !RM; if (full) localStorage.setItem('klak.intro', hoy); } catch (e) {}
+  let done = false;
+  const finish = cls => {
+    if (done) return; done = true;
+    el.classList.add(cls); renderCaja(true);
+    setTimeout(() => el.remove(), cls === 'out' ? 480 : 380);
+  };
+  if (!full) { requestAnimationFrame(() => finish('quick')); return; }
+  const tA = [], img = el.querySelector('img');
+  const start = () => {
+    requestAnimationFrame(() => el.classList.add('go'));
+    tA.push(setTimeout(() => { if (actx && actx.state === 'running') { play('tecla'); setTimeout(() => play('lampara'), 110); } }, 750));
+    tA.push(setTimeout(() => finish('out'), 2100));
+  };
+  if (img.complete) start(); else { img.onload = start; img.onerror = start; setTimeout(() => { if (!el.classList.contains('go')) start(); }, 600); }
+  el.addEventListener('pointerdown', () => { tA.forEach(clearTimeout); finish('skip'); }, { once: true });
+})();
 if ('serviceWorker' in navigator && location.protocol === 'https:') navigator.serviceWorker.register('sw.js').catch(() => {});
 window.KLAK = { DB, openNote, insert, newline, setOverview, render };
 })();

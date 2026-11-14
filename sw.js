@@ -1,5 +1,5 @@
-/* Klak · service worker · versión 1.0.3 */
-const CACHE = 'klak-1.0.3';
+/* Klak · service worker · versión 1.0.4 */
+const CACHE = 'klak-1.0.4';
 const FILES = [
   './',
   './css/klak.css',
@@ -24,6 +24,7 @@ const FILES = [
   './img/espacio_verde.png',
   './img/guia_golpe.png',
   './img/guia_reposo.png',
+  './img/intro_tecla.png',
   './img/marco.png',
   './img/mesa_lino.jpg',
   './img/mesa_nogal.jpg',
