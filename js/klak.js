@@ -1,8 +1,8 @@
 /* Klak · máquina de escribir para notas y diario
-   Versión 1.0.4 */
+   Versión 1.0.5 */
 (function () {
 'use strict';
-const VERSION = '1.0.4';
+const VERSION = '1.0.5';
 const $ = (s, r = document) => r.querySelector(s);
 const $$ = (s, r = document) => Array.from(r.querySelectorAll(s));
 const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
@@ -114,7 +114,7 @@ function segPick(b) {
   $$('button', b.parentNode).forEach(x => x.classList.toggle('on', x === b));
   placePill(b.parentNode, true);
 }
-const PRESS = '.lk button,.circ,.newb,.trashb,.card,.tab,.pill,.ghost,.bigbtn,.seg button,.tog,.sws button,.sr.click,.ed-count';
+const PRESS = '.fx-tab,.lk button,.circ,.newb,.trashb,.card,.tab,.pill,.ghost,.bigbtn,.seg button,.tog,.sws button,.sr.click,.ed-count';
 document.addEventListener('pointerdown', e => {
   const el = e.target.closest && e.target.closest(PRESS); if (!el) return;
   el.classList.add('pressed');
@@ -191,65 +191,167 @@ const titleOf = t => { const l = (t || '').split('\n').map(s => s.trim()).find(s
 const bodyOf = t => { const ls = (t || '').split('\n'); const i = ls.findIndex(s => s.trim()); return ls.slice(i + 1).join(' ').trim() || ''; };
 const words = t => ((t || '').match(/\S+/g) || []).length;
 let tabsSig = null;
-function syncTabs(anim) {
-  const tabs = $('#tabs'), ink = $('.tab-ink', tabs); if (!ink) return;
-  $$('.tab[data-s]', tabs).forEach(b => b.classList.toggle('act', b.dataset.s === tabSel));
-  const act = $('.tab.act', tabs); if (!act) return;
-  if (!anim) ink.style.transition = 'none';
-  ink.style.left = act.offsetLeft + 'px'; ink.style.width = act.offsetWidth + 'px';
-  if (!anim) { void ink.offsetWidth; ink.style.transition = ''; }
+/* ---------- El fichero: cajón con fichas ---------- */
+const FX = { items: [], els: [], d: 0, maxD: 0, H: 0, F: 0, CH: 250, GAP: 62, crossed: new Set(), opened: false };
+function holderText(t) {
+  const h = $('#fxHolder'); if (!h) return;
+  const old = h.firstElementChild;
+  if (old && old.textContent === t) return;
+  const n = document.createElement('span'); n.textContent = t;
+  if (old && old.animate && !RM) {
+    old.animate([{ translate: '0 0', opacity: 1 }, { translate: '0 -7px', opacity: 0 }], { duration: 130, easing: E_OUT, fill: 'forwards' });
+    setTimeout(() => old.remove(), 135);
+    h.appendChild(n); n.animate([{ translate: '0 7px', opacity: 0 }, { translate: '0 0', opacity: 1 }], { duration: 260, easing: E_IN, delay: 90, fill: 'backwards' });
+  } else { h.innerHTML = ''; h.appendChild(n); }
+}
+function syncTabs() {
+  $$('#tabs .fx-tab[data-s]').forEach(b => b.classList.toggle('sel', b.dataset.s === tabSel));
+  const sep = DB.seps.find(x => x.id === tabSel);
+  holderText(query ? 'Resultados' : (sep ? sep.name : 'Todas las hojas'));
 }
 function switchTab(id) {
   if (id === tabSel) return;
-  tabSel = id; syncTabs(true);
-  const old = $$('.month,.card,.empty', $('#cjBox'));
-  old.forEach((el, i) => el.animate([{ opacity: 1, scale: 1 }, { opacity: 0, scale: RM ? 1 : 0.94 }], { duration: RM ? 150 : 220, easing: E_OUT, delay: RM ? 0 : Math.min(i, 5) * 30, fill: 'forwards' }));
-  setTimeout(() => renderCaja(true), old.length ? 220 + Math.min(old.length - 1, 5) * 30 : 0);
+  tabSel = id; play('mayus', 0.5); syncTabs();
+  const old = FX.els;
+  old.forEach((el, i) => el.animate([{ opacity: 1, translate: '0 0' }, { opacity: 0, translate: RM ? '0 0' : '0 16px' }], { duration: RM ? 150 : 220, easing: E_OUT, delay: RM ? 0 : Math.min(old.length - 1 - i, 8) * 25, fill: 'forwards' }));
+  setTimeout(() => renderCaja(true), old.length ? 300 : 0);
 }
+const TAB_COL = ['#5B4A3A', '#6E7F5C', '#8C5A3C', '#4F6378', '#7A5A78', '#5E7A78', '#8A7440'];
 function renderTabs() {
   const tabs = $('#tabs');
-  tabs.innerHTML = `<i class="tab-ink"></i><button class="tab ${tabSel === 'all' ? 'act' : ''}" data-s="all">Todas</button>` +
-    DB.seps.map(s => `<button class="tab ${tabSel === s.id ? 'act' : ''}" data-s="${s.id}">${esc(s.name)}</button>`).join('') +
-    `<button class="tab add" id="tabAdd" aria-label="Nuevo separador"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></button>`;
-  $$('.tab[data-s]', tabs).forEach(b => {
+  tabs.innerHTML = `<button class="fx-tab" data-s="all" style="--c:${TAB_COL[0]}"><span>Todas</span></button>` +
+    DB.seps.map((s, i) => `<button class="fx-tab" data-s="${s.id}" style="--c:${TAB_COL[1 + i % (TAB_COL.length - 1)]}"><span>${esc(s.name)}</span></button>`).join('') +
+    `<button class="fx-tab add" id="tabAdd" aria-label="Nuevo separador"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></button>`;
+  $$('.fx-tab[data-s]', tabs).forEach(b => {
     b.onclick = () => switchTab(b.dataset.s);
     if (b.dataset.s !== 'all') longPress(b, () => sepMenu(b.dataset.s));
   });
-  $('#tabAdd').onclick = () => promptSheet('Nuevo separador', '', name => { const s = { id: uid(), name }; DB.seps.push(s); tabSel = s.id; save(); renderCaja(); }, 'Crear');
+  $('#tabAdd').onclick = () => promptSheet('Nuevo separador', '', name => { const s = { id: uid(), name }; DB.seps.push(s); tabSel = s.id; save(); renderCaja(true); }, 'Crear');
 }
 function sepMenu(id) {
   const s = DB.seps.find(x => x.id === id); if (!s) return;
   actionSheet(s.name, [
     { label: 'Cambiar nombre', fn: () => promptSheet('Cambiar nombre', s.name, v => { s.name = v; save(); renderCaja(); }) },
-    { label: 'Quitar separador', danger: true, fn: () => { DB.seps = DB.seps.filter(x => x.id !== id); DB.notes.forEach(n => { if (n.sep === id) n.sep = null; }); if (tabSel === id) tabSel = 'all'; save(); renderCaja(); } }
+    { label: 'Quitar separador', danger: true, fn: () => { DB.seps = DB.seps.filter(x => x.id !== id); DB.notes.forEach(n => { if (n.sep === id) n.sep = null; }); if (tabSel === id) tabSel = 'all'; save(); renderCaja(true); } }
   ]);
 }
 function renderCaja(anim) {
   const sig = DB.seps.map(x => x.id + ':' + x.name).join('|');
   if (sig !== tabsSig) { tabsSig = sig; renderTabs(); }
-  syncTabs(false);
+  syncTabs();
   const q = query.toLowerCase();
   const list = DB.notes.filter(n => !n.deleted && (tabSel === 'all' || n.sep === tabSel) && (!q || n.text.toLowerCase().includes(q)))
-    .sort((a, b) => b.updated - a.updated);
+    .sort((a, b) => a.updated - b.updated); // la más antigua al fondo, la última delante
   const box = $('#cjBox');
-  if (!list.length) {
-    box.innerHTML = `<div class="empty">${q ? 'No hay hojas con esas palabras.' : 'Aún no hay hojas aquí.<br>Pulsa «Nueva hoja» y empieza a escribir.'}</div>`;
-    if (anim) enter($$('.empty', box), { rise: 12 });
-    return;
-  }
-  let html = '', curM = '';
+  FX.items = []; let mk = null;
   list.forEach(n => {
-    const d = new Date(n.updated); const m = MESES[d.getMonth()] + ' de ' + d.getFullYear();
-    if (m !== curM) { if (curM) html += '</div>'; html += `<div class="month">${m[0].toUpperCase() + m.slice(1)}</div><div class="grid">`; curM = m; }
-    const sep = DB.seps.find(x => x.id === n.sep), w = words(n.text);
-    html += `<button class="card" data-id="${n.id}"><span class="cd"><b>${d.getDate()}</b><i>${MES3[d.getMonth()]}</i></span><span class="cc"><span class="ct">${esc(titleOf(n.text))}</span><span class="cb">${esc(bodyOf(n.text))}</span><span class="cm">${w} ${w === 1 ? 'palabra' : 'palabras'}${tabSel === 'all' && sep ? ', en ' + esc(sep.name) : ''}</span></span></button>`;
+    const d = new Date(n.updated), k = d.getFullYear() * 12 + d.getMonth();
+    if (k !== mk) { FX.items.push({ month: d }); mk = k; }
+    FX.items.push({ note: n });
   });
-  box.innerHTML = html + '</div>';
-  $$('.card', box).forEach(c => {
-    c.onclick = () => openNote(c.dataset.id);
-    longPress(c, () => noteMenu(c.dataset.id));
+  if (!list.length) FX.items = [{ empty: q ? 'No hay hojas con esas palabras.' : 'Aún no hay hojas aquí.\nPulsa «Nueva hoja» y empieza a escribir.' }];
+  box.innerHTML = '';
+  let mi = 0;
+  FX.els = FX.items.map((it, i) => {
+    const e = document.createElement('div');
+    if (it.month) {
+      const m = MESES[it.month.getMonth()];
+      e.className = 'fx-card fx-month';
+      e.innerHTML = `<div class="fx-mt" style="left:${[24, 196, 110][mi++ % 3]}px">${m[0].toUpperCase() + m.slice(1)}${it.month.getFullYear() !== new Date().getFullYear() ? ' de ' + it.month.getFullYear() : ''}</div>`;
+    } else if (it.empty) {
+      e.className = 'fx-card fx-empty';
+      e.innerHTML = `<div class="mono fx-eb">${esc(it.empty).replace('\n', '<br>')}</div>`;
+    } else {
+      const n = it.note, d = new Date(n.updated), w = words(n.text), sep = DB.seps.find(x => x.id === n.sep);
+      e.className = 'fx-card'; e.dataset.id = n.id;
+      e.innerHTML = `<div class="fx-row"><span class="mono fx-t">${esc(titleOf(n.text))}</span><span class="fx-d">${d.getDate()} ${MES3[d.getMonth()]}</span></div>
+        <div class="mono fx-b">${esc(bodyOf(n.text))}</div><div class="fx-meta">${w} ${w === 1 ? 'palabra' : 'palabras'}${sep && tabSel === 'all' ? ', en ' + esc(sep.name) : ''}</div><i class="fx-hole"></i>`;
+    }
+    e.style.zIndex = i + 1; box.appendChild(e); return e;
   });
-  if (anim) enter($$('.month,.card', box), { rise: 12, dur: 470, gap: 55 });
+  fxMeasure(); FX.d = 0; FX.crossed = new Set(); fxLayout();
+  if (anim) {
+    if (!FX.opened && !RM) {
+      FX.opened = true;
+      $('#fxDrawer').animate([{ translate: '0 110vh' }, { translate: '0 0' }], { duration: 700, easing: 'cubic-bezier(.25,0,.1,1)' });
+      play('retorno', 0.5);
+    }
+    FX.els.forEach((e, i) => e.animate(RM ? [{ opacity: 0 }, { opacity: 1 }] : [{ opacity: 0, translate: '0 26px' }, { opacity: 1, translate: '0 0' }],
+      { duration: RM ? 150 : 480, easing: RM ? 'linear' : 'cubic-bezier(.3,1.2,.4,1)', delay: RM ? 0 : (FX.opened === true && i >= 0 ? 0 : 0) + Math.min(FX.els.length - 1 - i, 8) * 55, fill: 'backwards' }));
+  }
+}
+function fxMeasure() {
+  const box = $('#cjBox'); FX.H = box.clientHeight || 450;
+  FX.CH = Math.max(150, Math.min(250, FX.H - 60));
+  FX.F = FX.H - FX.CH + 40;
+  const N = FX.items.length; FX.off = new Array(N).fill(0);
+  for (let i = N - 2; i >= 0; i--) FX.off[i] = FX.off[i + 1] + (FX.items[i].month ? 30 : FX.GAP);
+  FX.maxD = N ? FX.off[0] : 0;
+  FX.els.forEach(e => { e.style.height = (FX.CH + 40) + 'px'; });
+}
+function fxLayout(sound) {
+  const N = FX.items.length;
+  FX.els.forEach((e, i) => {
+    let y = FX.F - FX.off[i] + FX.d, rx = 0, op = 1, sc = 1, br = '';
+    if (y > FX.F) {
+      const p = Math.min(1, (y - FX.F) / 110); rx = p * 78; y = FX.F + (y - FX.F) * .28; op = 1 - p * .15;
+      if (p > .5 && !FX.crossed.has(i)) { FX.crossed.add(i); if (sound) play('tecla', 0.3); }
+      if (p < .3) FX.crossed.delete(i);
+    } else if (y < 0) { y = y * .16; sc = .985; op = Math.max(0, 1 + y / 40); br = `brightness(${(.75 + .25 * Math.max(0, 1 + y / 12)).toFixed(2)})`; }
+    e.style.transform = `translateY(${y.toFixed(1)}px) rotateX(${rx.toFixed(1)}deg) scale(${sc})`;
+    e.style.opacity = op; e.style.filter = br;
+    e.style.visibility = (y < -46 || rx > 77) ? 'hidden' : 'visible';
+  });
+}
+(function fxDrag() {
+  const box = $('#cjBox');
+  let st = null, inert = null;
+  box.addEventListener('pointerdown', e => {
+    cancelAnimationFrame(inert);
+    st = { y: e.clientY, x: e.clientX, d: FX.d, t: performance.now(), moved: false, v: 0, ly: e.clientY, lt: performance.now(), target: e.target.closest('.fx-card[data-id]') };
+    if (st.target) { st.lp = setTimeout(() => { if (st && !st.moved) { st.done = true; noteMenu(st.target.dataset.id); } }, 520); }
+    try { box.setPointerCapture(e.pointerId); } catch (_) {}
+  });
+  box.addEventListener('pointermove', e => {
+    if (!st) return;
+    if (!st.moved && Math.hypot(e.clientX - st.x, e.clientY - st.y) > 8) { st.moved = true; clearTimeout(st.lp); }
+    if (!st.moved) return;
+    const now = performance.now();
+    st.v = (e.clientY - st.ly) / Math.max(1, now - st.lt); st.ly = e.clientY; st.lt = now;
+    FX.d = Math.max(0, Math.min(FX.maxD, st.d + (e.clientY - st.y)));
+    fxLayout(true);
+  });
+  const up = e => {
+    if (!st) return; clearTimeout(st.lp);
+    const s0 = st; st = null;
+    if (s0.done) return;
+    if (!s0.moved) {
+      const el = document.elementFromPoint(e.clientX, e.clientY);
+      const c = el && el.closest('.fx-card[data-id]');
+      if (c) fxOpen(c);
+      return;
+    }
+    let v = s0.v * 16;
+    const step = () => {
+      v *= 0.93; if (Math.abs(v) < 0.4) return;
+      FX.d = Math.max(0, Math.min(FX.maxD, FX.d + v)); fxLayout(true);
+      if (FX.d === 0 || FX.d === FX.maxD) return;
+      inert = requestAnimationFrame(step);
+    };
+    if (!RM) inert = requestAnimationFrame(step);
+  };
+  box.addEventListener('pointerup', up);
+  box.addEventListener('pointercancel', () => { if (st) clearTimeout(st.lp); st = null; });
+  box.addEventListener('contextmenu', e => e.preventDefault());
+  window.addEventListener('resize', () => { if (current === 'vCaja') { fxMeasure(); fxLayout(); } });
+})();
+function fxOpen(c) {
+  const id = c.dataset.id;
+  if (RM || !c.animate) { openNote(id); return; }
+  const base = c.style.transform;
+  c.classList.add('fx-lift');
+  c.animate([{ transform: base }, { transform: base + ' translateY(-26px) scale(1.03)' }], { duration: 280, easing: 'cubic-bezier(.3,1.2,.4,1)', fill: 'forwards' });
+  setTimeout(() => { openNote(id); setTimeout(() => { c.getAnimations().forEach(a => a.cancel()); c.classList.remove('fx-lift'); }, 700); }, 260);
 }
 function noteMenu(id) {
   const n = DB.notes.find(x => x.id === id); if (!n) return;
@@ -426,7 +528,9 @@ function lineHTML(arr, k, withCaret) {
 
 function render(full) {
   if (!note || !G) return;
+  const prevLen = lines.length;
   lines = layout(note.text, G.cols);
+  if (!full && prevLen && lines.length > prevLen) retUntil = performance.now() + 1350;
   caret = { line: lines.length - 1, col: lines[lines.length - 1].length };
   const pages = Math.max(1, Math.ceil(lines.length / G.rows));
   const k = TINTA[V('tinta')] || 0.75;
@@ -455,13 +559,15 @@ function render(full) {
   if (!overview) place();
 }
 
-let scrollAnim = null;
+let scrollAnim = null, retUntil = 0;
 function place(retorno) {
+  if (retorno) retUntil = performance.now() + 1350;
+  retorno = performance.now() < retUntil;
   const cp = Math.floor(caret.line / G.rows), row = caret.line % G.rows;
   const sheet = edSheets.children[cp]; if (!sheet) return;
   const lineTop = sheet.offsetTop + G.padT + row * G.lh;
   const target = Math.max(0, lineTop + G.lh - edScroll.clientHeight + 30);
-  smoothScroll(target, retorno ? 320 : 140);
+  smoothScroll(target, retorno ? 460 : 140);
   const caretX = G.padL + caret.col * G.cw;
   let px;
   if (G.mode === 'a4') {
@@ -542,7 +648,7 @@ function insert(str, opts = {}) {
   if (str.length === 1 && last.trim()) strike(last);
   const newLine = lines.length > beforeLines;
   if (Math.ceil(lines.length / G.rows) > beforePages && beforeLines > 0) play('cargar_hoja', 0.9);
-  if (newLine && !str.includes('\n') && G.mode === 'a4') { play('retorno', 0.8); place(true); }
+  if (newLine && !str.includes('\n')) { play('retorno', 0.8); place(true); }
   if (S.campanilla && caret.col === G.cols - 7 && bellLine !== caret.line) { bellLine = caret.line; play('campanilla', 0.8); }
   save();
 }

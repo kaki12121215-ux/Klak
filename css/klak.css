@@ -506,3 +506,42 @@ html,body{background:#0A0908}
 #kIntro.quick>*:not(.ki-desk){display:none}
 #kIntro.skip{animation:kiOut .15s linear both;pointer-events:none}
 @media (prefers-reduced-motion:reduce){#kIntro.out .ki-key,#kIntro.out .ki-word{animation:none}}
+
+/* ---------- LA CAJA COMO FICHERO (1.0.5) ---------- */
+.fx-drawer{position:relative;z-index:3;flex:1;min-height:0;margin:44px 12px calc(var(--safeB) + 92px);border-radius:6px;
+  background:url(../img/mesa_roble.jpg) center/300px;box-shadow:0 26px 50px rgba(0,0,0,.6),inset 0 0 0 1px rgba(0,0,0,.25)}
+.fx-guides{position:absolute;left:12px;right:12px;top:-40px;height:46px;display:flex;gap:5px;align-items:flex-end;overflow-x:auto;overflow-y:hidden;scrollbar-width:none;z-index:-1;padding-top:6px}
+.fx-guides::-webkit-scrollbar{display:none}
+.fx-tab{flex:1 0 74px;max-width:96px;height:40px;border-radius:8px 8px 0 0;background:var(--c) url(../img/papel_manila.jpg) center/200px;background-blend-mode:multiply;
+  box-shadow:0 -1px 3px rgba(0,0,0,.4);transition:translate .3s var(--e-in),filter .3s,scale .34s var(--e-spring);color:#F6EEDB}
+.fx-tab span{display:block;font:italic 600 15px 'Lora',serif;padding-top:2px;text-shadow:0 1px 1px rgba(0,0,0,.4);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding:0 6px}
+.fx-tab.sel{translate:0 -6px;filter:brightness(1.18);box-shadow:0 -2px 6px rgba(0,0,0,.45)}
+.fx-tab.add{flex:0 0 44px;--c:#4A3A2C}
+.fx-tab.add svg{width:16px;height:16px;stroke:#F6EEDB}
+.fx-tab.pressed{scale:.95}
+.fx-inner{position:absolute;left:14px;right:14px;top:14px;bottom:96px;background:linear-gradient(180deg,#140E09,#2A1D13 70%);box-shadow:inset 0 10px 24px rgba(0,0,0,.8);overflow:hidden;border-radius:2px;perspective:700px}
+.fx-stack{position:absolute;left:10px;right:10px;top:22px;bottom:0;touch-action:none}
+.fx-card{position:absolute;left:0;right:0;top:0;height:290px;background:var(--paper) center/280px;border-radius:3px;box-shadow:0 -3px 8px rgba(0,0,0,.45);padding:14px 16px 0;transform-origin:50% 100%;will-change:transform;color:#1F1B18;-webkit-user-select:none;user-select:none}
+.fx-card::before{content:'';position:absolute;left:16px;right:16px;top:42px;height:1px;background:rgba(197,34,31,.55)}
+.fx-card::after{content:'';position:absolute;left:16px;right:16px;top:64px;bottom:0;background:repeating-linear-gradient(180deg,transparent 0 21px,rgba(70,110,170,.22) 21px 22px);pointer-events:none}
+.fx-row{display:flex;justify-content:space-between;align-items:baseline;gap:10px}
+.fx-t{font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.fx-d{font:italic 500 14px 'Lora',serif;opacity:.7;white-space:nowrap}
+.fx-b{position:relative;z-index:1;font-size:14px;line-height:22px;font-weight:400;margin-top:22px;opacity:.88;display:-webkit-box;-webkit-line-clamp:4;-webkit-box-orient:vertical;overflow:hidden;word-break:break-word}
+.fx-meta{position:relative;z-index:1;font:italic 13px 'Lora',serif;opacity:.6;margin-top:10px}
+.fx-hole{position:absolute;left:50%;bottom:50px;width:12px;height:12px;margin-left:-6px;border-radius:50%;background:#2A1D13;box-shadow:inset 0 2px 3px rgba(0,0,0,.7)}
+.fx-month{background:#C9A869 url(../img/papel_manila.jpg) center/200px;background-blend-mode:multiply;overflow:visible}
+.fx-month::before,.fx-month::after{display:none}
+.fx-mt{position:absolute;top:-24px;width:118px;height:28px;border-radius:7px 7px 0 0;background:inherit;background-size:200px;display:flex;align-items:center;justify-content:center;font:italic 600 15px 'Lora',serif;color:#3A2A14;box-shadow:0 -2px 3px rgba(0,0,0,.3);white-space:nowrap}
+.fx-empty .fx-eb{position:relative;z-index:1;font-size:14px;line-height:22px;margin-top:4px;text-align:center;padding-top:30px}
+.fx-empty::before,.fx-empty::after{display:none}
+.fx-lift{box-shadow:0 -3px 8px rgba(0,0,0,.45),0 18px 30px rgba(0,0,0,.5)}
+.fx-face{position:absolute;left:0;right:0;bottom:0;height:96px;border-top:1px solid rgba(0,0,0,.35)}
+.fx-holder{position:absolute;left:50%;top:16px;width:160px;height:44px;margin-left:-80px;border-radius:5px;background:linear-gradient(180deg,#E9D49A,#A88647 45%,#7A6033 55%,#D9C17E);box-shadow:0 3px 6px rgba(0,0,0,.5)}
+.fx-holder i{position:absolute;left:7px;right:7px;top:7px;bottom:7px;background:url(../img/papel_crema.jpg) center/160px;overflow:hidden;box-shadow:inset 0 1px 3px rgba(0,0,0,.4)}
+.fx-holder i span{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font:italic 600 16px 'Lora',serif;color:#1F1B18;white-space:nowrap}
+.fx-pull{position:absolute;left:50%;top:66px;width:70px;height:14px;margin-left:-35px;border-radius:0 0 30px 30px;background:linear-gradient(180deg,#7A6033,#E9D49A 40%,#A88647);box-shadow:0 3px 5px rgba(0,0,0,.5)}
+#vCaja .cj-search.on~.fx-drawer{margin-top:50px}
+.fx-card .mono{font-family:'Courier Prime','Courier New',monospace;font-weight:700}
+.fx-card .fx-b.mono{font-weight:400}
+.fx-month{background-color:#D2B57C}
