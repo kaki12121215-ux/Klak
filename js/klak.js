@@ -1,8 +1,8 @@
 /* Klak · máquina de escribir para notas y diario
-   Versión 1.0.2 */
+   Versión 1.0.3 */
 (function () {
 'use strict';
-const VERSION = '1.0.2';
+const VERSION = '1.0.3';
 const $ = (s, r = document) => r.querySelector(s);
 const $$ = (s, r = document) => Array.from(r.querySelectorAll(s));
 const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
@@ -461,7 +461,7 @@ function place(retorno) {
   const sheet = edSheets.children[cp]; if (!sheet) return;
   const lineTop = sheet.offsetTop + G.padT + row * G.lh;
   const target = Math.max(0, lineTop + G.lh - edScroll.clientHeight + 30);
-  smoothScroll(target);
+  smoothScroll(target, retorno ? 320 : 140);
   const caretX = G.padL + caret.col * G.cw;
   let px;
   if (G.mode === 'a4') {
@@ -472,6 +472,11 @@ function place(retorno) {
     edSheets.style.transform = 'none';
     px = (G.zw - G.w) / 2 + caretX;
   }
+  const feed = $('#edFeed');
+  feed.classList.toggle('carro', G.mode === 'a4'); feed.classList.toggle('ret', !!retorno);
+  feed.style.width = G.w + 'px';
+  feed.style.transform = G.mode === 'a4' ? `translateX(${(px - caretX).toFixed(1)}px)` : `translateX(${((G.zw - G.w) / 2).toFixed(1)}px)`;
+  edPointer.classList.toggle('ret', !!retorno); edRibbon.classList.toggle('ret', !!retorno); edType.classList.toggle('ret', !!retorno);
   edPointer.style.left = px.toFixed(1) + 'px';
   placeMachine(px);
 }
@@ -506,12 +511,12 @@ function strike(ch) {
   hitT1 = setTimeout(() => edType.classList.remove('hit'), 55);
   hitT2 = setTimeout(() => edRibbon.classList.remove('hit'), 85);
 }
-function smoothScroll(to) {
+function smoothScroll(to, dur = 140) {
   cancelAnimationFrame(scrollAnim);
   const from = edScroll.scrollTop, d = to - from;
   if (Math.abs(d) < 1) return;
   if (Math.abs(d) > 600) { edScroll.scrollTop = to; return; }
-  const t0 = performance.now(), dur = 140;
+  const t0 = performance.now();
   const step = t => { const p = Math.min(1, (t - t0) / dur); edScroll.scrollTop = from + d * (1 - Math.pow(1 - p, 3)); if (p < 1) scrollAnim = requestAnimationFrame(step); };
   scrollAnim = requestAnimationFrame(step);
 }
