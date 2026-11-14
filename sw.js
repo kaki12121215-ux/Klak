@@ -1,5 +1,5 @@
-/* Klak · service worker · versión 1.0.1 */
-const CACHE = 'klak-1.0.1';
+/* Klak · service worker · versión 1.0.2 */
+const CACHE = 'klak-1.0.2';
 const FILES = [
   './',
   './css/klak.css',

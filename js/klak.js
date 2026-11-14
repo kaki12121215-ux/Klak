@@ -1,8 +1,8 @@
 /* Klak · máquina de escribir para notas y diario
-   Versión 1.0.1 */
+   Versión 1.0.2 */
 (function () {
 'use strict';
-const VERSION = '1.0.1';
+const VERSION = '1.0.2';
 const $ = (s, r = document) => r.querySelector(s);
 const $$ = (s, r = document) => Array.from(r.querySelectorAll(s));
 const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
@@ -558,7 +558,7 @@ function backspace() {
 
 function openNote(id, isNew) {
   note = DB.notes.find(n => n.id === id); if (!note) return;
-  overview = false; edScroll.classList.remove('overview'); edSheets.style.zoom = ''; $('#vEditor').classList.remove('sinCinta'); edScroll.style.opacity = 1;
+  overview = false; edScroll.classList.remove('overview'); edSheets.style.zoom = ''; edSheets.style.marginBottom = ''; edSheets.style.transformOrigin = ''; $('#vEditor').classList.remove('sinCinta'); edScroll.style.opacity = 1;
   setShift(0); setLayout('abc');
   $('#vEditor').classList.toggle('ios', S.teclado === 'ios');
   if (S.lampAuto) { const h = new Date().getHours(); S.lampOn = h >= 20 || h < 7; }
@@ -604,10 +604,23 @@ function setOverviewNow(on) {
   edScroll.classList.toggle('overview', on);
   $('#vEditor').classList.toggle('sinCinta', on);
   measure();
-  edSheets.style.transform = 'none';
-  edSheets.style.zoom = on ? Math.min(1, (G.zw - 28) / G.w, (G.zh - 60) / G.h).toFixed(3) : '';
-  if (on) edSheets.style.width = '100%';
-  render(true);
+  edSheets.style.zoom = '';
+  edSheets.style.marginBottom = '';
+  if (on) {
+    // Safari no aplica bien «zoom»: se escala con transform y se corrige el hueco a mano
+    const sc = Math.min(1, (G.zw - 28) / G.w, (G.zh - 60) / G.h);
+    edSheets.classList.remove('carro', 'ret');
+    edSheets.style.width = G.w + 'px';
+    render(true);
+    edSheets.style.transformOrigin = '0 0';
+    edSheets.style.transform = `translateX(${((G.zw - G.w * sc) / 2).toFixed(1)}px) scale(${sc.toFixed(4)})`;
+    edSheets.style.marginBottom = (-(edSheets.offsetHeight * (1 - sc))).toFixed(0) + 'px';
+    $$('.ed-sheet', edSheets).forEach(x => { x.style.marginLeft = '0'; });
+  } else {
+    edSheets.style.transform = 'none';
+    edSheets.style.transformOrigin = '';
+    render(true);
+  }
   if (on) { edScroll.scrollTop = 0; hint('Toca dos veces para volver a escribir'); }
   else { edScroll.scrollTop = edScroll.scrollHeight; place(); }
 }
