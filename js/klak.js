@@ -1,8 +1,8 @@
 /* Klak · máquina de escribir para notas y diario
-   Versión 1.0.5 */
+   Versión 1.0.6 */
 (function () {
 'use strict';
-const VERSION = '1.0.5';
+const VERSION = '1.0.6';
 const $ = (s, r = document) => r.querySelector(s);
 const $$ = (s, r = document) => Array.from(r.querySelectorAll(s));
 const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
@@ -950,12 +950,10 @@ function printNote(n, name) {
 /* ================= INICIO ================= */
 applyLook();
 renderCaja(false);
-/* animación de inicio: completa la primera vez de cada día; si no, un fundido */
+/* animación de inicio: siempre al abrir (se salta tocando); con «Reducir movimiento», un fundido */
 (function intro() {
   const el = $('#kIntro'); if (!el) return;
-  const hoy = new Date().toDateString();
-  let full = false;
-  try { full = localStorage.getItem('klak.intro') !== hoy && !RM; if (full) localStorage.setItem('klak.intro', hoy); } catch (e) {}
+  const full = !RM && !(window.__klakSinIntro);
   let done = false;
   const finish = cls => {
     if (done) return; done = true;
