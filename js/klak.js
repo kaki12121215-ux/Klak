@@ -1,8 +1,8 @@
 /* Klak · máquina de escribir para notas y diario
-   Versión 1.1.1 */
+   Versión 1.2.0 */
 (function () {
 'use strict';
-const VERSION = '1.1.1';
+const VERSION = '1.2.0';
 const $ = (s, r = document) => r.querySelector(s);
 const $$ = (s, r = document) => Array.from(r.querySelectorAll(s));
 const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
@@ -15,7 +15,7 @@ const fmt = n => n.toLocaleString('es-ES');
 const KEY = 'klak.data';
 const DEF_SET = {
   teclado: 'klak', hoja: 'a5', autocap: true, sonido: true, volumen: 0.7, campanilla: true, silencio: false,
-  fondo: 'claro', tinta: 'usada', teclas: 'negro', real: true,
+  fondo: 'claro', tinta: 'usada', teclas: 'crema', real: true,
   lampAuto: false, lampOn: false
 };
 let DB = { notes: [], seps: [], settings: { ...DEF_SET } };
@@ -25,10 +25,11 @@ try {
 } catch (e) { console.warn('No se pudieron leer los datos', e); }
 if (!DB.seps.length && !localStorage.getItem(KEY)) DB.seps = [{ id: 's1', name: 'Diario' }, { id: 's2', name: 'Notas' }, { id: 's3', name: 'Ideas' }];
 const S = DB.settings;
-// 1.1.0: solo quedan 4 teclados y 2 fondos
-if (!['negro', 'marfil', 'piedra', 'verde'].includes(S.teclas)) S.teclas = 'negro';
+// 1.2.0: teclados normales en 4 estilos; los antiguos pasan a Crema
+const KB_OK = ['claro', 'crema', 'grafito', 'contorno'];
+if (!KB_OK.includes(S.teclas)) S.teclas = 'crema';
 if (!['claro', 'crema'].includes(S.fondo)) S.fondo = 'claro';
-DB.notes.forEach(n => { if (n.look && n.look.teclas && !['negro', 'marfil', 'piedra', 'verde'].includes(n.look.teclas)) n.look.teclas = 'negro'; });
+DB.notes.forEach(n => { if (n.look && n.look.teclas && !KB_OK.includes(n.look.teclas)) n.look.teclas = 'crema'; });
 const DESK = !!(window.matchMedia && matchMedia('(hover: hover) and (pointer: fine)').matches);
 document.body.classList.toggle('desk', DESK);
 let note = null;
@@ -131,17 +132,18 @@ document.addEventListener('pointerdown', e => {
 /* ================= APARIENCIA ================= */
 const FONDOS = { claro: 'Claro', crema: 'Crema' };
 const FONDO_COL = { claro: '#E4E5EC', crema: '#EFE6D2' };
-const TECLAS = { negro: 'Negro', marfil: 'Marfil', piedra: 'Piedra', verde: 'Verde' };
+const TECLAS = { claro: 'Claro', crema: 'Crema', grafito: 'Grafito', contorno: 'Contorno' };
+const TECLA_COL = { claro: 'linear-gradient(180deg,#fff,#EDEDF1)', crema: 'linear-gradient(180deg,#FBF7EE,#E9E1CF)', grafito: 'linear-gradient(180deg,#4A4950,#3A3940)', contorno: 'transparent' };
 function applyLook() {
   const b = document.body, f = FONDOS[V('fondo')] ? V('fondo') : 'claro';
   b.classList.toggle('f-crema', f === 'crema');
   b.classList.toggle('noche', !!S.lampOn);
-  Object.keys(TECLAS).forEach(t => $('#vEditor').classList.toggle('kb-' + t, t !== 'negro' && V('teclas') === t));
+  Object.keys(TECLAS).forEach(t => $('#vEditor').classList.toggle('kb-' + t, (TECLAS[V('teclas')] ? V('teclas') : 'crema') === t));
   const m = document.querySelector('meta[name=theme-color]'); if (m) m.content = S.lampOn ? '#131216' : FONDO_COL[f];
 }
 function setUnit() {
   const w = Math.min(window.innerWidth, 560);
-  const u = Math.max(30, Math.min(52, Math.floor((w - 6) / 10)));
+  const u = Math.max(28, Math.min(48, Math.floor((w - 6 - 54) / 10)));
   document.documentElement.style.setProperty('--u', u + 'px');
 }
 setUnit();
@@ -250,7 +252,7 @@ function lookSheet(title, look, okLabel, onChange, onOk) {
   const dots = (k, names, col) => `<div class="sws strip">` + Object.keys(names).map(x => `<button data-lk="${k}" data-v="${x}" class="${look[k] === x ? 'on' : ''}" style="background:${col(x)}" aria-label="${names[x]}"></button>`).join('') + `</div>`;
   openSheet(`<div class="sh-t">${title}</div>
     <div class="lk"><div class="lk-l">Fondo<i data-n="fondo">${FONDOS[look.fondo] || 'Claro'}</i></div>${dots('fondo', FONDOS, x => FONDO_COL[x])}</div>
-    <div class="lk"><div class="lk-l">Teclado<i data-n="teclas">${TECLAS[look.teclas]}</i></div><div class="sws strip">${Object.keys(TECLAS).map(x => `<button data-lk="teclas" data-v="${x}" class="tk ${look.teclas === x ? 'on' : ''}" style="background-image:url(img/tecla${x === 'negro' ? '' : '_' + x}.png)" aria-label="${TECLAS[x]}"></button>`).join('')}</div></div>
+    <div class="lk"><div class="lk-l">Teclado<i data-n="teclas">${TECLAS[look.teclas]}</i></div><div class="sws strip">${Object.keys(TECLAS).map(x => `<button data-lk="teclas" data-v="${x}" class="kbs kbs-${x} ${look.teclas === x ? 'on' : ''}" style="background:${TECLA_COL[x]}" aria-label="${TECLAS[x]}"></button>`).join('')}</div></div>
     <div class="lk row"><div class="lk-l">Tamaño</div><div class="seg"><i class="seg-pill"></i><button data-lk="hoja" data-v="a5" class="${look.hoja === 'a5' ? 'on' : ''}">A5</button><button data-lk="hoja" data-v="a4" class="${look.hoja === 'a4' ? 'on' : ''}">A4 con carro</button></div></div>
     <button class="bigbtn" id="lkOk">${okLabel}</button>`);
   const NM = { fondo: FONDOS, teclas: TECLAS };
@@ -310,7 +312,7 @@ function renderAjustes() {
   <div class="sg">Hojas nuevas</div>
   <p class="sg-n">Cada hoja guarda su aspecto. Esto es lo que trae una hoja recién creada.</p>
   <div class="sr"><span>Fondo</span><div class="sws strip">${Object.keys(FONDOS).map(x => `<button data-fo="${x}" class="${S.fondo === x ? 'on' : ''}" style="background:${FONDO_COL[x]}" aria-label="${FONDOS[x]}"></button>`).join('')}</div></div>
-  <div class="sr"><span>Color del teclado</span>${strip('tk', TECLAS, S.teclas, x => `img/tecla${x === 'negro' ? '' : '_' + x}.png`, 'tk')}</div>
+  <div class="sr"><span>Estilo del teclado</span><div class="sws strip">${Object.keys(TECLAS).map(x => `<button data-tk="${x}" class="kbs kbs-${x} ${S.teclas === x ? 'on' : ''}" style="background:${TECLA_COL[x]}" aria-label="${TECLAS[x]}"></button>`).join('')}</div></div>
   <div class="sr"><span>Tinta</span>${seg('tinta', [['nueva', 'Nueva'], ['usada', 'Usada'], ['gastada', 'Gastada']])}</div>
   <div class="sr"><span>Tamaño</span>${seg('hoja', [['a5', 'A5'], ['a4', 'A4 con carro']])}</div>
   <div class="sg">Noche</div>
@@ -647,20 +649,20 @@ const LAYOUTS = {
   abc: [
     'QWERTYUIOP'.split(''),
     'ASDFGHJKLÑ'.split(''),
-    [{ sp: 'shift', t: 'MAYÚS' }, ...'ZXCVBNM'.split(''), { sp: 'del', t: 'BORRAR' }],
-    [{ sp: '123', t: '123' }, ',', { sp: 'space' }, '.', { sp: 'ret', t: 'RETORNO' }]
+    [{ sp: 'shift', t: '⇧' }, ...'ZXCVBNM'.split(''), { sp: 'del', t: '⌫' }],
+    [{ sp: '123', t: '123' }, ',', { sp: 'space' }, '.', { sp: 'ret', t: '↵' }]
   ],
   num: [
     '1234567890'.split(''),
     ['-', '/', ':', ';', '(', ')', '€', '&', '@', '"'],
-    [{ sp: 'sym', t: '#+=' }, '¿', '?', '¡', '!', "'", '%', '*', { sp: 'del', t: 'BORRAR' }],
-    [{ sp: 'abc', t: 'ABC' }, ',', { sp: 'space' }, '.', { sp: 'ret', t: 'RETORNO' }]
+    [{ sp: 'sym', t: '#+=' }, '¿', '?', '¡', '!', "'", '%', '*', { sp: 'del', t: '⌫' }],
+    [{ sp: 'abc', t: 'ABC' }, ',', { sp: 'space' }, '.', { sp: 'ret', t: '↵' }]
   ],
   sym: [
     ['[', ']', '{', '}', '#', '^', '+', '=', '_', '\\'],
     ['|', '~', '<', '>', '$', '£', '°', '·', '§', '¨'],
-    [{ sp: '123', t: '123' }, '…', '—', '«', '»', '´', '`', '¬', { sp: 'del', t: 'BORRAR' }],
-    [{ sp: 'abc', t: 'ABC' }, ',', { sp: 'space' }, '.', { sp: 'ret', t: 'RETORNO' }]
+    [{ sp: '123', t: '123' }, '…', '—', '«', '»', '´', '`', '¬', { sp: 'del', t: '⌫' }],
+    [{ sp: 'abc', t: 'ABC' }, ',', { sp: 'space' }, '.', { sp: 'ret', t: '↵' }]
   ]
 };
 let kbLayout = 'abc', shift = 0, lastShiftTap = 0;
@@ -668,7 +670,7 @@ function setLayout(l) {
   kbLayout = l;
   $('#kbRows').innerHTML = LAYOUTS[l].map(row => '<div class="krow">' + row.map(k => {
     if (typeof k === 'string') return `<div class="k" data-c="${esc(k)}"><b>${esc(k)}</b></div>`;
-    if (k.sp === 'space') return `<div class="k sp" data-s="space"></div>`;
+    if (k.sp === 'space') return `<div class="k sp" data-s="space"><b>espacio</b></div>`;
     return `<div class="k w" data-s="${k.sp}"><b>${k.t}</b></div>`;
   }).join('') + '</div>').join('');
   if (current === 'vEditor' && $('#kbRows').animate) $('#kbRows').animate([{ opacity: 0.25 }, { opacity: 1 }], { duration: 200, easing: E_IN });
