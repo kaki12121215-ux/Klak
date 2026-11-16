@@ -7,7 +7,7 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Klak">
-<meta name="theme-color" content="#1C1A18">
+<meta name="theme-color" content="#E4E5EC">
 <title>Klak</title>
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="apple-touch-icon" href="icons/icono_180.png">
@@ -16,7 +16,9 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Courier+Prime:wght@400;700&family=Lora:ital,wght@0,400;0,500;0,600;1,500;1,600&display=swap" rel="stylesheet">
 <link rel="preload" as="image" href="img/intro_tecla.png">
-<link rel="stylesheet" href="css/klak.css">
+<link rel="preload" as="font" type="font/woff" href="fonts/veteran.woff" crossorigin>
+<link rel="stylesheet" href="css/klak.css?v=1.1.0">
+<link rel="stylesheet" href="css/klak-min.css?v=1.1.0">
 </head>
 <body>
 <div id="kIntro" aria-hidden="true"><div class="ki-desk"></div><div class="ki-glow"></div><div class="ki-key"><img src="img/intro_tecla.png" alt=""></div><div class="ki-word">Klak</div></div>
@@ -32,17 +34,14 @@
     </div>
   </header>
   <div class="cj-search" id="cjSearch"><input id="inBuscar" type="search" placeholder="Buscar en tus hojas" autocomplete="off"><button id="btnBuscarCerrar">Cerrar</button></div>
-  <div class="fx-drawer" id="fxDrawer">
-    <div class="fx-guides" id="tabs"></div>
-    <div class="fx-inner"><div class="fx-stack" id="cjBox"></div></div>
-    <div class="fx-face"><div class="fx-holder"><i id="fxHolder"><span>Todas las hojas</span></i></div><div class="fx-pull"></div></div>
-  </div>
+  <nav class="mn-tabs" id="tabs"></nav>
+  <main class="mn-list" id="cjBox"></main>
   <footer class="cj-foot"><button class="newb" id="btnNueva"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg><span>Nueva hoja</span></button></footer>
 </section>
 
 <!-- ============ ESCRIBIR ============ -->
 <section id="vEditor" class="view">
-  <header class="ed-top">
+  <header class="ed-top"><div class="ed-desk-hint">Escribe con tu teclado <kbd>Esc</kbd></div>
     <button class="circ dark" id="btnVolver" aria-label="Volver"><svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg></button>
     <button class="ed-count" id="edCount"></button>
     <div class="ed-right">
@@ -52,14 +51,12 @@
     </div>
   </header>
   <div class="ed-zone" id="edZone">
+    <div class="ed-light" id="edLight"><div class="eh-light"></div></div>
     <div class="ed-scroll" id="edScroll"><div class="ed-sheets" id="edSheets"></div></div>
-    <div class="ed-guide" id="edGuide"><div class="ed-scale" id="edScale"></div><div class="ed-pointer" id="edPointer"></div></div>
-    <div class="ed-ribbon" id="edRibbon"><img class="rb-rest" src="img/guia_reposo.png" alt=""><img class="rb-hit" src="img/guia_golpe.png" alt=""></div>
-    <div class="ed-type" id="edType"><img src="img/tipo.png" alt=""></div>
-    <div class="lamp-light" id="lampLight"></div>
+    <div class="ed-bar" id="edBar"></div>
+    <div class="ed-head" id="edHead"><i class="eh-stick"></i><i class="eh-cap"></i><div class="eh-pill"><i></i><i></i></div></div>
     <div class="ed-hint" id="edHint"></div>
   </div>
-  <div class="ed-roll"><div class="ed-feed" id="edFeed"></div></div>
   <div class="ed-kb" id="edKb"><div class="kb-plate"></div><div class="kb-rows" id="kbRows"></div></div>
   <textarea id="iosInput" autocapitalize="sentences" autocomplete="off" autocorrect="on" spellcheck="false" aria-label="Escribir"></textarea>
   <div class="accent-pop" id="accentPop"></div>
@@ -85,6 +82,6 @@
 <div id="printArea"></div>
 <style id="printPage"></style>
 
-<script src="js/klak.js"></script>
+<script src="js/klak.js?v=1.1.0"></script>
 </body>
 </html>

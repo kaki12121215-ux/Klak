@@ -1,8 +1,8 @@
 /* Klak · máquina de escribir para notas y diario
-   Versión 1.0.6 */
+   Versión 1.1.0 */
 (function () {
 'use strict';
-const VERSION = '1.0.6';
+const VERSION = '1.1.0';
 const $ = (s, r = document) => r.querySelector(s);
 const $$ = (s, r = document) => Array.from(r.querySelectorAll(s));
 const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
@@ -15,8 +15,8 @@ const fmt = n => n.toLocaleString('es-ES');
 const KEY = 'klak.data';
 const DEF_SET = {
   teclado: 'klak', hoja: 'a5', autocap: true, sonido: true, volumen: 0.7, campanilla: true, silencio: false,
-  papel: 'crema', tinta: 'usada', mesa: 'nogal', teclas: 'negro',
-  lampAuto: false, lampInt: 0.85, lampCal: 0.14, lampOn: false
+  fondo: 'claro', tinta: 'usada', teclas: 'negro', real: true,
+  lampAuto: false, lampOn: false
 };
 let DB = { notes: [], seps: [], settings: { ...DEF_SET } };
 try {
@@ -25,6 +25,12 @@ try {
 } catch (e) { console.warn('No se pudieron leer los datos', e); }
 if (!DB.seps.length && !localStorage.getItem(KEY)) DB.seps = [{ id: 's1', name: 'Diario' }, { id: 's2', name: 'Notas' }, { id: 's3', name: 'Ideas' }];
 const S = DB.settings;
+// 1.1.0: solo quedan 4 teclados y 2 fondos
+if (!['negro', 'marfil', 'piedra', 'verde'].includes(S.teclas)) S.teclas = 'negro';
+if (!['claro', 'crema'].includes(S.fondo)) S.fondo = 'claro';
+DB.notes.forEach(n => { if (n.look && n.look.teclas && !['negro', 'marfil', 'piedra', 'verde'].includes(n.look.teclas)) n.look.teclas = 'negro'; });
+const DESK = !!(window.matchMedia && matchMedia('(hover: hover) and (pointer: fine)').matches);
+document.body.classList.toggle('desk', DESK);
 let note = null;
 const V = k => (note && note.look && note.look[k] != null) ? note.look[k] : S[k];
 let saveT = null;
@@ -123,19 +129,15 @@ document.addEventListener('pointerdown', e => {
 });
 
 /* ================= APARIENCIA ================= */
-const PAPELES = { crema: 'Crema', hueso: 'Hueso', niebla: 'Niebla', manila: 'Manila', carta: 'Carta', kraft: 'Kraft' };
-const MESAS = { nogal: 'Nogal', roble: 'Roble', lino: 'Lino' };
-const TECLAS = { negro: 'Negro', marfil: 'Marfil', verde: 'Verde', rojo: 'Rojo', azul: 'Azul noche', madera: 'Madera', celeste: 'Celeste', petroleo: 'Petróleo', mostaza: 'Mostaza', terracota: 'Terracota', rosa: 'Rosa', lavanda: 'Lavanda', menta: 'Menta', mantequilla: 'Mantequilla', piedra: 'Piedra', burdeos: 'Burdeos' };
+const FONDOS = { claro: 'Claro', crema: 'Crema' };
+const FONDO_COL = { claro: '#E4E5EC', crema: '#EFE6D2' };
+const TECLAS = { negro: 'Negro', marfil: 'Marfil', piedra: 'Piedra', verde: 'Verde' };
 function applyLook() {
-  const r = document.documentElement.style;
-  r.setProperty('--paper', `url(${new URL('img/papel_' + V('papel') + '.jpg', location.href).href})`);
-  r.setProperty('--desk', `url(${new URL('img/mesa_' + V('mesa') + '.jpg', location.href).href})`);
-  $('#vEditor').classList.toggle('desk-light', V('mesa') !== 'nogal');
-  r.setProperty('--onDesk', V('mesa') === 'nogal' ? '#EFE6D2' : '#1F1B18');
-  document.body.classList.toggle('noche', !!S.lampOn);
+  const b = document.body, f = FONDOS[V('fondo')] ? V('fondo') : 'claro';
+  b.classList.toggle('f-crema', f === 'crema');
+  b.classList.toggle('noche', !!S.lampOn);
   Object.keys(TECLAS).forEach(t => $('#vEditor').classList.toggle('kb-' + t, t !== 'negro' && V('teclas') === t));
-  const L = $('#lampLight').style;
-  L.setProperty('--li', S.lampInt); L.setProperty('--lw', S.lampCal);
+  const m = document.querySelector('meta[name=theme-color]'); if (m) m.content = S.lampOn ? '#131216' : FONDO_COL[f];
 }
 function setUnit() {
   const w = Math.min(window.innerWidth, 560);
@@ -191,43 +193,18 @@ const titleOf = t => { const l = (t || '').split('\n').map(s => s.trim()).find(s
 const bodyOf = t => { const ls = (t || '').split('\n'); const i = ls.findIndex(s => s.trim()); return ls.slice(i + 1).join(' ').trim() || ''; };
 const words = t => ((t || '').match(/\S+/g) || []).length;
 let tabsSig = null;
-/* ---------- El fichero: cajón con fichas ---------- */
-const FX = { items: [], els: [], d: 0, maxD: 0, H: 0, F: 0, CH: 250, GAP: 62, crossed: new Set(), opened: false };
-function holderText(t) {
-  const h = $('#fxHolder'); if (!h) return;
-  const old = h.firstElementChild;
-  if (old && old.textContent === t) return;
-  const n = document.createElement('span'); n.textContent = t;
-  if (old && old.animate && !RM) {
-    old.animate([{ translate: '0 0', opacity: 1 }, { translate: '0 -7px', opacity: 0 }], { duration: 130, easing: E_OUT, fill: 'forwards' });
-    setTimeout(() => old.remove(), 135);
-    h.appendChild(n); n.animate([{ translate: '0 7px', opacity: 0 }, { translate: '0 0', opacity: 1 }], { duration: 260, easing: E_IN, delay: 90, fill: 'backwards' });
-  } else { h.innerHTML = ''; h.appendChild(n); }
-}
-function syncTabs() {
-  $$('#tabs .fx-tab[data-s]').forEach(b => b.classList.toggle('sel', b.dataset.s === tabSel));
-  const sep = DB.seps.find(x => x.id === tabSel);
-  holderText(query ? 'Resultados' : (sep ? sep.name : 'Todas las hojas'));
-}
-function switchTab(id) {
-  if (id === tabSel) return;
-  tabSel = id; play('mayus', 0.5); syncTabs();
-  const old = FX.els;
-  old.forEach((el, i) => el.animate([{ opacity: 1, translate: '0 0' }, { opacity: 0, translate: RM ? '0 0' : '0 16px' }], { duration: RM ? 150 : 220, easing: E_OUT, delay: RM ? 0 : Math.min(old.length - 1 - i, 8) * 25, fill: 'forwards' }));
-  setTimeout(() => renderCaja(true), old.length ? 300 : 0);
-}
-const TAB_COL = ['#5B4A3A', '#6E7F5C', '#8C5A3C', '#4F6378', '#7A5A78', '#5E7A78', '#8A7440'];
 function renderTabs() {
   const tabs = $('#tabs');
-  tabs.innerHTML = `<button class="fx-tab" data-s="all" style="--c:${TAB_COL[0]}"><span>Todas</span></button>` +
-    DB.seps.map((s, i) => `<button class="fx-tab" data-s="${s.id}" style="--c:${TAB_COL[1 + i % (TAB_COL.length - 1)]}"><span>${esc(s.name)}</span></button>`).join('') +
-    `<button class="fx-tab add" id="tabAdd" aria-label="Nuevo separador"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></button>`;
-  $$('.fx-tab[data-s]', tabs).forEach(b => {
-    b.onclick = () => switchTab(b.dataset.s);
+  tabs.innerHTML = `<button class="mn-tab" data-s="all">Todas</button>` +
+    DB.seps.map(s => `<button class="mn-tab" data-s="${s.id}">${esc(s.name)}</button>`).join('') +
+    `<button class="mn-tab add" id="tabAdd" aria-label="Nuevo separador">+</button>`;
+  $$('.mn-tab[data-s]', tabs).forEach(b => {
+    b.onclick = () => { if (b.dataset.s === tabSel) return; tabSel = b.dataset.s; play('mayus', 0.5); renderCaja(true); };
     if (b.dataset.s !== 'all') longPress(b, () => sepMenu(b.dataset.s));
   });
   $('#tabAdd').onclick = () => promptSheet('Nuevo separador', '', name => { const s = { id: uid(), name }; DB.seps.push(s); tabSel = s.id; save(); renderCaja(true); }, 'Crear');
 }
+function syncTabs() { $$('#tabs .mn-tab[data-s]').forEach(b => b.classList.toggle('sel', b.dataset.s === tabSel)); }
 function sepMenu(id) {
   const s = DB.seps.find(x => x.id === id); if (!s) return;
   actionSheet(s.name, [
@@ -241,117 +218,24 @@ function renderCaja(anim) {
   syncTabs();
   const q = query.toLowerCase();
   const list = DB.notes.filter(n => !n.deleted && (tabSel === 'all' || n.sep === tabSel) && (!q || n.text.toLowerCase().includes(q)))
-    .sort((a, b) => a.updated - b.updated); // la más antigua al fondo, la última delante
+    .sort((a, b) => b.updated - a.updated);
   const box = $('#cjBox');
-  FX.items = []; let mk = null;
-  list.forEach(n => {
-    const d = new Date(n.updated), k = d.getFullYear() * 12 + d.getMonth();
-    if (k !== mk) { FX.items.push({ month: d }); mk = k; }
-    FX.items.push({ note: n });
-  });
-  if (!list.length) FX.items = [{ empty: q ? 'No hay hojas con esas palabras.' : 'Aún no hay hojas aquí.\nPulsa «Nueva hoja» y empieza a escribir.' }];
-  box.innerHTML = '';
-  let mi = 0;
-  FX.els = FX.items.map((it, i) => {
-    const e = document.createElement('div');
-    if (it.month) {
-      const m = MESES[it.month.getMonth()];
-      e.className = 'fx-card fx-month';
-      e.innerHTML = `<div class="fx-mt" style="left:${[24, 196, 110][mi++ % 3]}px">${m[0].toUpperCase() + m.slice(1)}${it.month.getFullYear() !== new Date().getFullYear() ? ' de ' + it.month.getFullYear() : ''}</div>`;
-    } else if (it.empty) {
-      e.className = 'fx-card fx-empty';
-      e.innerHTML = `<div class="mono fx-eb">${esc(it.empty).replace('\n', '<br>')}</div>`;
-    } else {
-      const n = it.note, d = new Date(n.updated), w = words(n.text), sep = DB.seps.find(x => x.id === n.sep);
-      e.className = 'fx-card'; e.dataset.id = n.id;
-      e.innerHTML = `<div class="fx-row"><span class="mono fx-t">${esc(titleOf(n.text))}</span><span class="fx-d">${d.getDate()} ${MES3[d.getMonth()]}</span></div>
-        <div class="mono fx-b">${esc(bodyOf(n.text))}</div><div class="fx-meta">${w} ${w === 1 ? 'palabra' : 'palabras'}${sep && tabSel === 'all' ? ', en ' + esc(sep.name) : ''}</div><i class="fx-hole"></i>`;
-    }
-    e.style.zIndex = i + 1; box.appendChild(e); return e;
-  });
-  fxMeasure(); FX.d = 0; FX.crossed = new Set(); fxLayout();
-  if (anim) {
-    if (!FX.opened && !RM) {
-      FX.opened = true;
-      $('#fxDrawer').animate([{ translate: '0 110vh' }, { translate: '0 0' }], { duration: 700, easing: 'cubic-bezier(.25,0,.1,1)' });
-      play('retorno', 0.5);
-    }
-    FX.els.forEach((e, i) => e.animate(RM ? [{ opacity: 0 }, { opacity: 1 }] : [{ opacity: 0, translate: '0 26px' }, { opacity: 1, translate: '0 0' }],
-      { duration: RM ? 150 : 480, easing: RM ? 'linear' : 'cubic-bezier(.3,1.2,.4,1)', delay: RM ? 0 : (FX.opened === true && i >= 0 ? 0 : 0) + Math.min(FX.els.length - 1 - i, 8) * 55, fill: 'backwards' }));
+  if (!list.length) {
+    box.innerHTML = `<div class="mn-empty">${q ? 'No hay hojas con esas palabras.' : 'Aún no hay hojas aquí.<br>Pulsa «Nueva hoja» y empieza a escribir.'}</div>`;
+  } else {
+    let h = '', mk = null;
+    list.forEach(n => {
+      const d = new Date(n.updated), k = d.getFullYear() * 12 + d.getMonth();
+      if (k !== mk) { mk = k; const m = MESES[d.getMonth()]; h += `<div class="mn-month">${m}${d.getFullYear() !== new Date().getFullYear() ? ' de ' + d.getFullYear() : ''}</div>`; }
+      const w = words(n.text), sep = DB.seps.find(x => x.id === n.sep);
+      h += `<button class="mn-item" data-id="${n.id}"><span class="mn-d"><b>${d.getDate()}</b><i>${MES3[d.getMonth()]}</i></span>
+        <span class="mn-tx"><span class="mn-t">${esc(titleOf(n.text))}</span><span class="mn-b">${esc(bodyOf(n.text)) || '&nbsp;'}</span>
+        <span class="mn-m">${w} ${w === 1 ? 'palabra' : 'palabras'}${sep && tabSel === 'all' ? ' · ' + esc(sep.name) : ''}</span></span></button>`;
+    });
+    box.innerHTML = h;
+    $$('.mn-item', box).forEach(b => { b.onclick = () => openNote(b.dataset.id); longPress(b, () => noteMenu(b.dataset.id)); });
   }
-}
-function fxMeasure() {
-  const box = $('#cjBox'); FX.H = box.clientHeight || 450;
-  FX.CH = Math.max(150, Math.min(250, FX.H - 60));
-  FX.F = FX.H - FX.CH + 40;
-  const N = FX.items.length; FX.off = new Array(N).fill(0);
-  for (let i = N - 2; i >= 0; i--) FX.off[i] = FX.off[i + 1] + (FX.items[i].month ? 30 : FX.GAP);
-  FX.maxD = N ? FX.off[0] : 0;
-  FX.els.forEach(e => { e.style.height = (FX.CH + 40) + 'px'; });
-}
-function fxLayout(sound) {
-  const N = FX.items.length;
-  FX.els.forEach((e, i) => {
-    let y = FX.F - FX.off[i] + FX.d, rx = 0, op = 1, sc = 1, br = '';
-    if (y > FX.F) {
-      const p = Math.min(1, (y - FX.F) / 110); rx = p * 78; y = FX.F + (y - FX.F) * .28; op = 1 - p * .15;
-      if (p > .5 && !FX.crossed.has(i)) { FX.crossed.add(i); if (sound) play('tecla', 0.3); }
-      if (p < .3) FX.crossed.delete(i);
-    } else if (y < 0) { y = y * .16; sc = .985; op = Math.max(0, 1 + y / 40); br = `brightness(${(.75 + .25 * Math.max(0, 1 + y / 12)).toFixed(2)})`; }
-    e.style.transform = `translateY(${y.toFixed(1)}px) rotateX(${rx.toFixed(1)}deg) scale(${sc})`;
-    e.style.opacity = op; e.style.filter = br;
-    e.style.visibility = (y < -46 || rx > 77) ? 'hidden' : 'visible';
-  });
-}
-(function fxDrag() {
-  const box = $('#cjBox');
-  let st = null, inert = null;
-  box.addEventListener('pointerdown', e => {
-    cancelAnimationFrame(inert);
-    st = { y: e.clientY, x: e.clientX, d: FX.d, t: performance.now(), moved: false, v: 0, ly: e.clientY, lt: performance.now(), target: e.target.closest('.fx-card[data-id]') };
-    if (st.target) { st.lp = setTimeout(() => { if (st && !st.moved) { st.done = true; noteMenu(st.target.dataset.id); } }, 520); }
-    try { box.setPointerCapture(e.pointerId); } catch (_) {}
-  });
-  box.addEventListener('pointermove', e => {
-    if (!st) return;
-    if (!st.moved && Math.hypot(e.clientX - st.x, e.clientY - st.y) > 8) { st.moved = true; clearTimeout(st.lp); }
-    if (!st.moved) return;
-    const now = performance.now();
-    st.v = (e.clientY - st.ly) / Math.max(1, now - st.lt); st.ly = e.clientY; st.lt = now;
-    FX.d = Math.max(0, Math.min(FX.maxD, st.d + (e.clientY - st.y)));
-    fxLayout(true);
-  });
-  const up = e => {
-    if (!st) return; clearTimeout(st.lp);
-    const s0 = st; st = null;
-    if (s0.done) return;
-    if (!s0.moved) {
-      const el = document.elementFromPoint(e.clientX, e.clientY);
-      const c = el && el.closest('.fx-card[data-id]');
-      if (c) fxOpen(c);
-      return;
-    }
-    let v = s0.v * 16;
-    const step = () => {
-      v *= 0.93; if (Math.abs(v) < 0.4) return;
-      FX.d = Math.max(0, Math.min(FX.maxD, FX.d + v)); fxLayout(true);
-      if (FX.d === 0 || FX.d === FX.maxD) return;
-      inert = requestAnimationFrame(step);
-    };
-    if (!RM) inert = requestAnimationFrame(step);
-  };
-  box.addEventListener('pointerup', up);
-  box.addEventListener('pointercancel', () => { if (st) clearTimeout(st.lp); st = null; });
-  box.addEventListener('contextmenu', e => e.preventDefault());
-  window.addEventListener('resize', () => { if (current === 'vCaja') { fxMeasure(); fxLayout(); } });
-})();
-function fxOpen(c) {
-  const id = c.dataset.id;
-  if (RM || !c.animate) { openNote(id); return; }
-  const base = c.style.transform;
-  c.classList.add('fx-lift');
-  c.animate([{ transform: base }, { transform: base + ' translateY(-26px) scale(1.03)' }], { duration: 280, easing: 'cubic-bezier(.3,1.2,.4,1)', fill: 'forwards' });
-  setTimeout(() => { openNote(id); setTimeout(() => { c.getAnimations().forEach(a => a.cancel()); c.classList.remove('fx-lift'); }, 700); }, 260);
+  if (anim) enter(Array.from(box.children).slice(0, 10), { rise: 12, dur: 420, gap: 45 });
 }
 function noteMenu(id) {
   const n = DB.notes.find(x => x.id === id); if (!n) return;
@@ -363,24 +247,22 @@ function noteMenu(id) {
   ]);
 }
 function lookSheet(title, look, okLabel, onChange, onOk) {
-  const sw = (k, names, img) => `<div class="sws strip">` + Object.keys(names).map(x => `<button data-lk="${k}" data-v="${x}" class="${look[k] === x ? 'on' : ''} ${k === 'teclas' ? 'tk' : ''}" style="background-image:url(${img(x)})" aria-label="${names[x]}"></button>`).join('') + `</div>`;
+  const dots = (k, names, col) => `<div class="sws strip">` + Object.keys(names).map(x => `<button data-lk="${k}" data-v="${x}" class="${look[k] === x ? 'on' : ''}" style="background:${col(x)}" aria-label="${names[x]}"></button>`).join('') + `</div>`;
   openSheet(`<div class="sh-t">${title}</div>
-    <div class="lk"><div class="lk-l">Papel<i data-n="papel">${PAPELES[look.papel]}</i></div>${sw('papel', PAPELES, x => `img/papel_${x}.jpg`)}</div>
-    <div class="lk"><div class="lk-l">Mesa<i data-n="mesa">${MESAS[look.mesa]}</i></div>${sw('mesa', MESAS, x => `img/mesa_${x}.jpg`)}</div>
-    <div class="lk"><div class="lk-l">Teclas<i data-n="teclas">${TECLAS[look.teclas]}</i></div>${sw('teclas', TECLAS, x => `img/tecla${x === 'negro' ? '' : '_' + x}.png`)}</div>
+    <div class="lk"><div class="lk-l">Fondo<i data-n="fondo">${FONDOS[look.fondo] || 'Claro'}</i></div>${dots('fondo', FONDOS, x => FONDO_COL[x])}</div>
+    <div class="lk"><div class="lk-l">Teclado<i data-n="teclas">${TECLAS[look.teclas]}</i></div><div class="sws strip">${Object.keys(TECLAS).map(x => `<button data-lk="teclas" data-v="${x}" class="tk ${look.teclas === x ? 'on' : ''}" style="background-image:url(img/tecla${x === 'negro' ? '' : '_' + x}.png)" aria-label="${TECLAS[x]}"></button>`).join('')}</div></div>
     <div class="lk row"><div class="lk-l">Tamaño</div><div class="seg"><i class="seg-pill"></i><button data-lk="hoja" data-v="a5" class="${look.hoja === 'a5' ? 'on' : ''}">A5</button><button data-lk="hoja" data-v="a4" class="${look.hoja === 'a4' ? 'on' : ''}">A4 con carro</button></div></div>
     <button class="bigbtn" id="lkOk">${okLabel}</button>`);
-  const NM = { papel: PAPELES, mesa: MESAS, teclas: TECLAS };
+  const NM = { fondo: FONDOS, teclas: TECLAS };
   $$('[data-lk]', sheetUI).forEach(b => b.onclick = () => {
     const k = b.dataset.lk; look[k] = b.dataset.v;
     if (k === 'hoja') segPick(b); else { $$(`[data-lk="${k}"]`, sheetUI).forEach(x => x.classList.toggle('on', x === b)); $(`[data-n="${k}"]`, sheetUI).textContent = NM[k][look[k]]; }
     if (onChange) onChange();
   });
-  const on = $('.tk.on', sheetUI); if (on) on.parentNode.scrollLeft = Math.max(0, on.offsetLeft - 120);
   $('#lkOk').onclick = () => { closeSheet(); if (onOk) onOk(); };
 }
 $('#btnNueva').onclick = () => {
-  const look = { papel: S.papel, mesa: S.mesa, teclas: S.teclas, hoja: S.hoja };
+  const look = { fondo: S.fondo, teclas: S.teclas, hoja: S.hoja };
   lookSheet('Hoja nueva', look, 'Empezar a escribir', null, () => {
     const n = { id: uid(), text: '', sep: tabSel === 'all' ? null : tabSel, created: Date.now(), updated: Date.now(), look };
     DB.notes.push(n); setTimeout(() => openNote(n.id, true), 220);
@@ -419,6 +301,7 @@ function renderAjustes() {
   <div class="sg">Escritura</div>
   <div class="sr"><span>Teclado</span>${seg('teclado', [['klak', 'Klak'], ['ios', 'iOS']])}</div>
   <div class="sr"><span>Mayúscula automática</span>${tog('autocap')}</div>
+  <div class="sr"><span>Modo máquina real<small>Borrar solo retrocede: lo nuevo se escribe encima y la tinta se acumula</small></span>${tog('real')}</div>
   <div class="sg">Sonido</div>
   <div class="sr"><span>Sonido de teclas</span>${tog('sonido')}</div>
   <div class="sr"><span>Volumen</span>${rng('volumen', 0.1, 1, 0.05)}</div>
@@ -426,16 +309,13 @@ function renderAjustes() {
   <div class="sr"><span>Sonar con el móvil en silencio</span>${tog('silencio')}</div>
   <div class="sg">Hojas nuevas</div>
   <p class="sg-n">Cada hoja guarda su aspecto. Esto es lo que trae una hoja recién creada.</p>
-  <div class="sr"><span>Papel</span>${strip('p', PAPELES, S.papel, x => `img/papel_${x}.jpg`)}</div>
-  <div class="sr"><span>Mesa</span>${strip('m', MESAS, S.mesa, x => `img/mesa_${x}.jpg`)}</div>
-  <div class="sr col"><span>Teclas</span>${strip('tk', TECLAS, S.teclas, x => `img/tecla${x === 'negro' ? '' : '_' + x}.png`, 'tk')}</div>
+  <div class="sr"><span>Fondo</span><div class="sws strip">${Object.keys(FONDOS).map(x => `<button data-fo="${x}" class="${S.fondo === x ? 'on' : ''}" style="background:${FONDO_COL[x]}" aria-label="${FONDOS[x]}"></button>`).join('')}</div></div>
+  <div class="sr"><span>Color del teclado</span>${strip('tk', TECLAS, S.teclas, x => `img/tecla${x === 'negro' ? '' : '_' + x}.png`, 'tk')}</div>
   <div class="sr"><span>Tinta</span>${seg('tinta', [['nueva', 'Nueva'], ['usada', 'Usada'], ['gastada', 'Gastada']])}</div>
   <div class="sr"><span>Tamaño</span>${seg('hoja', [['a5', 'A5'], ['a4', 'A4 con carro']])}</div>
-  <div class="sg">Lámpara</div>
-  <div class="sr"><span>Encendida</span>${tog('lampOn')}</div>
+  <div class="sg">Noche</div>
+  <div class="sr"><span>Modo noche</span>${tog('lampOn')}</div>
   <div class="sr"><span>Encender al anochecer</span>${tog('lampAuto')}</div>
-  <div class="sr"><span>Intensidad</span>${rng('lampInt', 0.5, 0.95, 0.05)}</div>
-  <div class="sr"><span>Calidez</span>${rng('lampCal', 0, 0.3, 0.02)}</div>
   <div class="sg">Copia de seguridad</div>
   <div class="sr click" id="setExp"><span>Descargar una copia de todas las hojas</span><span class="chev">&rsaquo;</span></div>
   <div class="sr click" id="setImp"><span>Restaurar una copia</span><span class="chev">&rsaquo;</span></div>
@@ -445,8 +325,7 @@ function renderAjustes() {
   $$('[data-k]', B).forEach(b => b.onclick = () => { S[b.dataset.k] = b.dataset.v; save(); applyLook(); segPick(b); });
   $$('[data-t]', B).forEach(b => b.onclick = () => { S[b.dataset.t] = !S[b.dataset.t]; b.classList.toggle('on', S[b.dataset.t]); save(); audioUnlock(); if (b.dataset.t === 'lampOn') applyLook(); });
   $$('[data-r]', B).forEach(r => r.oninput = () => { S[r.dataset.r] = +r.value; save(); applyLook(); if (r.dataset.r === 'volumen') { audioUnlock(); play('tecla'); } });
-  $$('[data-p]', B).forEach(b => b.onclick = () => { S.papel = b.dataset.p; save(); applyLook(); $$('[data-p]', B).forEach(x => x.classList.toggle('on', x === b)); });
-  $$('[data-m]', B).forEach(b => b.onclick = () => { S.mesa = b.dataset.m; save(); applyLook(); $$('[data-m]', B).forEach(x => x.classList.toggle('on', x === b)); });
+  $$('[data-fo]', B).forEach(b => b.onclick = () => { S.fondo = b.dataset.fo; save(); applyLook(); $$('[data-fo]', B).forEach(x => x.classList.toggle('on', x === b)); });
   $$('[data-tk]', B).forEach(b => b.onclick = () => { S.teclas = b.dataset.tk; save(); applyLook(); $$('[data-tk]', B).forEach(x => x.classList.toggle('on', x === b)); });
   $$('.seg', B).forEach(sg => placePill(sg));
   $('#setExp').onclick = () => {
@@ -471,29 +350,36 @@ $('#btnAjVolver').onclick = () => { renderCaja(); show('vCaja'); };
 
 /* ================= MÁQUINA DE ESCRIBIR ================= */
 const FMT = {
-  a5: { cols: 35, ratio: 1.414, padX: 0.075, padY: 0.09, lh: 1.5 },
-  a4: { cols: 62, ratio: 1.414, padX: 0.075, padY: 0.08, lh: 1.5, fs: 19 }
+  a5: { cols: 35, ratio: 1.414, padX: 0.075, padY: 0.09, lh: 1.6 },
+  a4: { cols: 62, ratio: 1.414, padX: 0.075, padY: 0.08, lh: 1.6, fs: 19 }
 };
 const TINTA = { nueva: 0.35, usada: 0.75, gastada: 1.25 };
 let G = null; // G = geometría actual
 let lines = [], caret = { line: 0, col: 0 }, pageHTML = [], bellLine = -1, overview = false;
-const edZone = $('#edZone'), edScroll = $('#edScroll'), edSheets = $('#edSheets'), edPointer = $('#edPointer');
-$('#edScale').innerHTML = '<i></i>'.repeat(41);
+let back = 0; // modo máquina real: cuántas letras ha retrocedido el carro en el renglón
+const edZone = $('#edZone'), edScroll = $('#edScroll'), edSheets = $('#edSheets');
+const edHead = $('#edHead'), edBar = $('#edBar'), edLight = $('#edLight');
 
 function measure() {
-  const f = FMT[V('hoja')] || FMT.a5;
+  const f = { ...(FMT[V('hoja')] || FMT.a5) };
   const zw = edZone.clientWidth || window.innerWidth, zh = edZone.clientHeight || 400;
   let w, fs;
   if (V('hoja') === 'a4') { fs = f.fs; w = f.cols * 0.6 * fs / (1 - 2 * f.padX); }
-  else { w = Math.min(zw - 28, 520); fs = w * (1 - 2 * f.padX) / (f.cols * 0.6); }
+  else if (DESK && zw > 700) { f.cols = 64; fs = Math.min(22, (zw - 80) * (1 - 2 * f.padX) / (f.cols * 0.6)); w = f.cols * 0.6 * fs / (1 - 2 * f.padX); }
+  else { w = Math.min(zw - 20, 560); fs = w * (1 - 2 * f.padX) / (f.cols * 0.6); }
   const h = w * f.ratio, lh = fs * f.lh, padT = w * f.padY, padL = w * f.padX;
   const rows = Math.max(8, Math.floor((h - 2 * padT) / lh));
-  G = { ...f, mode: V('hoja'), w, h, fs, lh, padT, padL, rows, cw: fs * 0.6, zw, zh };
+  // la barra: en el ordenador deja folio por debajo; en el móvil, pegada al teclado
+  const barY = DESK ? Math.round(zh - Math.max(60, zh * 0.1)) : Math.round(zh - 22);
+  G = { ...f, mode: V('hoja'), w, h, fs, lh, padT, padL, rows, cw: fs * 0.6, zw, zh, barY };
   edSheets.classList.toggle('carro', V('hoja') === 'a4' && !overview);
   edSheets.style.width = V('hoja') === 'a4' ? w + 'px' : '100%';
   edSheets.style.padding = overview ? '14px 0 40px' : `${zh}px 0 ${zh}px`;
   edSheets.style.setProperty('--lh', lh + 'px');
+  edSheets.style.setProperty('--cw', (fs * 0.6) + 'px');
   edSheets.style.setProperty('--padT', padT + 'px');
+  edZone.style.setProperty('--barY', barY + 'px');
+  edZone.style.setProperty('--fs', fs + 'px');
   pageHTML = [];
 }
 
@@ -515,14 +401,21 @@ function layout(text, cols) {
 function jitter(idx, ch, k) {
   let h = (Math.imul(idx + 1, 2654435761) ^ Math.imul(ch.charCodeAt(0) + 7, 40503)) >>> 0;
   const r1 = (h & 1023) / 1023, r2 = ((h >>> 10) & 1023) / 1023, r3 = ((h >>> 20) & 1023) / 1023;
-  const dy = (r1 - 0.5) * 1.3 * k, dx = (r3 - 0.5) * 0.5 * k;
+  const dy = (r1 - 0.5) * 1.3 * k, dx = (r3 - 0.5) * 0.9 * k;
   let op = 1 - r2 * 0.36 * k; if (k > 1 && r3 < 0.07) op *= 0.55;
   return `transform:translate(${dx.toFixed(2)}px,${dy.toFixed(2)}px);opacity:${Math.max(0.35, op).toFixed(2)}`;
 }
-function lineHTML(arr, k, withCaret) {
+/* una letra: si se ha escrito encima, se apilan todos los golpes y la tinta se acumula */
+function cellHTML(n, ch, idx, k) {
+  const ov = n && n.over && n.over[idx];
+  if (!ov || !ov.length) return ch === ' ' ? '<span> </span>' : `<span style="${jitter(idx, ch, k)}">${esc(ch)}</span>`;
+  const all = ov.concat(ch === ' ' ? [] : [ch]);
+  const g = Math.min(4, all.length);
+  return `<span class="ov o${g}">` + all.map((c, j) => `<b style="${jitter(idx * 7 + j * 131 + 3, c, Math.max(k, 0.5))}">${esc(c)}</b>`).join('') + '</span>';
+}
+function lineHTML(arr, k) {
   let s = '';
-  for (const [ch, idx] of arr) s += ch === ' ' ? ' ' : `<span style="${jitter(idx, ch, k)}">${esc(ch)}</span>`;
-  if (withCaret) s += `<i class="caret" style="height:${(G.lh * 0.72).toFixed(1)}px"></i>`;
+  for (const [ch, idx] of arr) s += cellHTML(note, ch, idx, k);
   return `<div class="ed-line">${s || ' '}</div>`;
 }
 
@@ -531,25 +424,25 @@ function render(full) {
   const prevLen = lines.length;
   lines = layout(note.text, G.cols);
   if (!full && prevLen && lines.length > prevLen) retUntil = performance.now() + 1350;
-  caret = { line: lines.length - 1, col: lines[lines.length - 1].length };
+  const lastLen = lines[lines.length - 1].length;
+  if (back > lastLen) back = lastLen;
+  caret = { line: lines.length - 1, col: lastLen - back };
   const pages = Math.max(1, Math.ceil(lines.length / G.rows));
   const k = TINTA[V('tinta')] || 0.75;
   if (full || edSheets.children.length !== pages) {
-    const grew = !full && pages === edSheets.children.length + 1;
     edSheets.innerHTML = '';
     for (let p = 0; p < pages; p++) {
       const sh = document.createElement('div');
-      sh.className = 'ed-sheet' + (V('papel') === 'carta' ? ' lined' : '');
+      sh.className = 'ed-sheet';
       sh.style.cssText = `width:${G.w}px;height:${G.h}px;margin-left:${V('hoja') === 'a4' ? 0 : 'auto'}`;
-      sh.innerHTML = `<div class="ed-lines" style="left:${G.padL}px;top:${G.padT}px;font-size:${G.fs}px;font-weight:700"></div>`;
+      sh.innerHTML = `<div class="ed-lines" style="left:${G.padL}px;top:${G.padT}px;font-size:${G.fs}px"></div>`;
       edSheets.appendChild(sh);
     }
-    if (grew) enter([edSheets.lastChild], { rise: 0, dur: 320 });
     pageHTML = [];
   }
   for (let p = 0; p < pages; p++) {
     let h = '';
-    for (let r = p * G.rows; r < Math.min(lines.length, (p + 1) * G.rows); r++) h += lineHTML(lines[r], k, r === caret.line && !overview);
+    for (let r = p * G.rows; r < Math.min(lines.length, (p + 1) * G.rows); r++) h += lineHTML(lines[r], k);
     if (pageHTML[p] !== h) { edSheets.children[p].firstChild.innerHTML = h; pageHTML[p] = h; }
   }
   // contador
@@ -566,9 +459,10 @@ function place(retorno) {
   const cp = Math.floor(caret.line / G.rows), row = caret.line % G.rows;
   const sheet = edSheets.children[cp]; if (!sheet) return;
   const lineTop = sheet.offsetTop + G.padT + row * G.lh;
-  const target = Math.max(0, lineTop + G.lh - edScroll.clientHeight + 30);
+  // el renglón que se escribe queda justo encima de la barra
+  const target = Math.max(0, lineTop + G.lh - (G.barY - Math.round(G.fs * 1.15)));
   smoothScroll(target, retorno ? 460 : 140);
-  const caretX = G.padL + caret.col * G.cw;
+  const caretX = G.padL + (caret.col + 0.5) * G.cw;
   let px;
   if (G.mode === 'a4') {
     px = G.zw * 0.5;
@@ -578,44 +472,15 @@ function place(retorno) {
     edSheets.style.transform = 'none';
     px = (G.zw - G.w) / 2 + caretX;
   }
-  const feed = $('#edFeed');
-  feed.classList.toggle('carro', G.mode === 'a4'); feed.classList.toggle('ret', !!retorno);
-  feed.style.width = G.w + 'px';
-  feed.style.transform = G.mode === 'a4' ? `translateX(${(px - caretX).toFixed(1)}px)` : `translateX(${((G.zw - G.w) / 2).toFixed(1)}px)`;
-  edPointer.classList.toggle('ret', !!retorno); edRibbon.classList.toggle('ret', !!retorno); edType.classList.toggle('ret', !!retorno);
-  edPointer.style.left = px.toFixed(1) + 'px';
-  placeMachine(px);
+  edHead.classList.toggle('ret', !!retorno); edLight.classList.toggle('ret', !!retorno);
+  edHead.style.transform = edLight.style.transform = `translateX(${px.toFixed(1)}px)`;
 }
-/* guía de cinta, barra de tipos y luz siguen al punto de escritura */
-const RB = { restW: 534, restH: 603, rTop: 72, rCx: 272.5, hitW: 500, hitH: 840, hCx: 260.5, ribbonW: 385 };
-const edRibbon = $('#edRibbon'), edType = $('#edType');
-function placeMachine(px) {
-  const H = edScroll.clientHeight;
-  const lineBottom = H - 30, lineMid = lineBottom - G.lh / 2;
-  const s = Math.max(0.06, (G.cw * 4.3) / RB.ribbonW);
-  const restTop = lineBottom + 2 - RB.rTop * s;
-  const baseBottom = restTop + RB.restH * s;
-  const [rest, hit] = edRibbon.children;
-  rest.style.cssText = `width:${RB.restW * s}px;left:${-RB.rCx * s}px;top:${restTop}px`;
-  hit.style.cssText = `width:${RB.hitW * s}px;left:${-RB.hCx * s}px;top:${baseBottom - RB.hitH * s}px`;
-  edRibbon.style.transform = `translateX(${px.toFixed(1)}px)`;
-  // barra de tipos: la cabeza cubre el renglón al golpear
-  const tw = G.cw * 1.6, ts = tw / 60;
-  const headC = 37 * ts; // centro de la cabeza en la imagen reducida
-  const strikeTop = lineMid - headC;
-  edType.style.width = tw + 'px';
-  edType.style.left = (px - G.cw / 2 - tw / 2).toFixed(1) + 'px';
-  edType.style.top = strikeTop + 'px';
-  edType.style.setProperty('--rest', (H + 12 - strikeTop) + 'px');
-  const L = $('#lampLight').style; L.setProperty('--lx', px.toFixed(0) + 'px'); L.setProperty('--ly', lineMid.toFixed(0) + 'px');
-}
-let hitT1 = null, hitT2 = null;
-function strike(ch) {
+let hitT = null;
+function strike() {
   if (overview || !G) return;
-  clearTimeout(hitT1); clearTimeout(hitT2);
-  edRibbon.classList.add('hit'); edType.classList.add('hit');
-  hitT1 = setTimeout(() => edType.classList.remove('hit'), 55);
-  hitT2 = setTimeout(() => edRibbon.classList.remove('hit'), 85);
+  clearTimeout(hitT);
+  edHead.classList.add('hit');
+  hitT = setTimeout(() => edHead.classList.remove('hit'), 70);
 }
 function smoothScroll(to, dur = 140) {
   cancelAnimationFrame(scrollAnim);
@@ -629,23 +494,36 @@ function smoothScroll(to, dur = 140) {
 
 function shouldCap() {
   if (!S.autocap) return false;
+  if (back > 0) return false;
   return /(^|[.!?…]\s+|\n\s*)[¿¡"«(\-—]*$/.test(note.text);
+}
+/* escribir encima de lo que ya hay (modo máquina real) */
+function overstrike(ch) {
+  const idx = note.text.length - back;
+  back--;
+  if (ch === ' ') return false; // el espacio solo avanza el carro
+  const old = note.text[idx];
+  if (old && old !== ' ' && old !== '\n') { if (!note.over) note.over = {}; (note.over[idx] = note.over[idx] || []).push(old); }
+  note.text = note.text.slice(0, idx) + ch + note.text.slice(idx + 1);
+  return true;
 }
 function insert(str, opts = {}) {
   if (!note || overview) return;
+  if (str.length > 1 || str.includes('\n')) back = 0;
   const beforeLines = lines.length, beforePages = Math.ceil(lines.length / G.rows);
+  let struck = false;
   for (const ch0 of str) {
     let ch = ch0;
     if (!opts.raw && /\p{L}/u.test(ch)) {
       if (shift > 0 || shouldCap()) ch = ch.toUpperCase();
       if (shift === 1) setShift(0);
     }
-    note.text += ch;
+    if (back > 0) { if (overstrike(ch)) struck = true; }
+    else { note.text += ch; if (ch.trim()) struck = true; }
   }
   note.updated = Date.now();
   render();
-  const last = note.text.slice(-1);
-  if (str.length === 1 && last.trim()) strike(last);
+  if (str.length === 1 && struck) strike();
   const newLine = lines.length > beforeLines;
   if (Math.ceil(lines.length / G.rows) > beforePages && beforeLines > 0) play('cargar_hoja', 0.9);
   if (newLine && !str.includes('\n')) { play('retorno', 0.8); place(true); }
@@ -655,6 +533,7 @@ function insert(str, opts = {}) {
 function newline() {
   if (!note || overview) return;
   play('retorno');
+  back = 0;
   const before = Math.ceil(lines.length / G.rows);
   note.text += '\n'; note.updated = Date.now();
   render(); place(true);
@@ -663,17 +542,29 @@ function newline() {
 }
 function backspace() {
   if (!note || overview || !note.text) return;
-  note.text = [...note.text].slice(0, -1).join('');
+  if (S.real) {
+    // como en una máquina: el carro retrocede una letra, sin borrar
+    const len = lines.length ? lines[lines.length - 1].length : 0;
+    if (back >= len) return;
+    play('mayus', 0.6);
+    back++; render();
+    return;
+  }
+  play('borrar', 0.8);
+  back = 0;
+  const i = note.text.length - 1;
+  note.text = note.text.slice(0, i);
+  if (note.over && note.over[i]) { delete note.over[i]; }
   note.updated = Date.now(); render(); save();
 }
 
 function openNote(id, isNew) {
   note = DB.notes.find(n => n.id === id); if (!note) return;
+  back = 0;
   overview = false; edScroll.classList.remove('overview'); edSheets.style.zoom = ''; edSheets.style.marginBottom = ''; edSheets.style.transformOrigin = ''; $('#vEditor').classList.remove('sinCinta'); edScroll.style.opacity = 1;
   setShift(0); setLayout('abc');
   $('#vEditor').classList.toggle('ios', S.teclado === 'ios');
   if (S.lampAuto) { const h = new Date().getHours(); S.lampOn = h >= 20 || h < 7; }
-  $('#vEditor').classList.toggle('lamp', !!S.lampOn);
   applyLook();
   show('vEditor');
   requestAnimationFrame(() => {
@@ -692,14 +583,14 @@ $('#btnVolver').onclick = closeNote;
 
 /* lámpara */
 $('#btnLampara').onclick = () => {
-  S.lampOn = !$('#vEditor').classList.contains('lamp');
-  $('#vEditor').classList.toggle('lamp', S.lampOn);
-  play('lampara', 1); save(); document.body.classList.toggle('noche', !!S.lampOn);
+  S.lampOn = !S.lampOn;
+  play('lampara', 1); save(); applyLook();
 };
 $('#btnAspecto').onclick = () => {
   if (!note) return;
-  if (!note.look) note.look = { papel: S.papel, mesa: S.mesa, teclas: S.teclas, hoja: S.hoja };
-  lookSheet('Aspecto de esta hoja', note.look, 'Listo', () => { applyLook(); measure(); render(true); place(); save(); });
+  if (!note.look) note.look = { fondo: S.fondo, teclas: S.teclas, hoja: S.hoja };
+  if (!note.look.fondo) note.look.fondo = S.fondo;
+  lookSheet('Aspecto de esta hoja', note.look, 'Listo', () => { applyLook(); measure(); render(true); edScroll.scrollTop = edScroll.scrollHeight; place(); save(); });
 };
 
 /* vista de hoja entera */
@@ -806,7 +697,7 @@ function charFor(c) { return /\p{L}/u.test(c) ? c.toLowerCase() : c; }
 function pressSpecial(s) {
   if (s === 'space') { play('espacio'); insert(' '); }
   else if (s === 'ret') newline();
-  else if (s === 'del') { play('borrar', 0.8); backspace(); }
+  else if (s === 'del') backspace();
   else if (s === 'shift') {
     play('mayus', 0.7);
     const now = Date.now();
@@ -832,7 +723,7 @@ kbRows.addEventListener('pointerdown', e => {
   if (s) {
     if (s === 'del') {
       pressSpecial('del');
-      st.timer = setTimeout(() => { st.rep = setInterval(() => { play('borrar', 0.5); backspace(); }, 75); }, 450);
+      st.timer = setTimeout(() => { st.rep = setInterval(() => backspace(), S.real ? 140 : 75); }, 450);
     } else pressSpecial(s);
     return;
   }
@@ -868,7 +759,9 @@ document.addEventListener('keydown', e => {
   if (current !== 'vEditor' || !note || sheetUI.classList.contains('on')) return;
   if (document.activeElement && document.activeElement.id === 'iosInput') return;
   if (e.metaKey || e.ctrlKey || e.altKey && e.key.length !== 1) return;
-  if (e.key === 'Backspace') { e.preventDefault(); play('borrar', 0.8); backspace(); }
+  if (e.key === 'Dead') return;
+  if (e.key === 'Escape') { e.preventDefault(); if (overview) setOverview(false); else closeNote(); }
+  else if (e.key === 'Backspace') { e.preventDefault(); backspace(); }
   else if (e.key === 'Enter') { e.preventDefault(); newline(); }
   else if (e.key === ' ') { e.preventDefault(); play('espacio'); insert(' ', { raw: true }); }
   else if (e.key.length === 1) { e.preventDefault(); play('tecla'); insert(e.key, { raw: true }); }
@@ -886,7 +779,7 @@ iosIn.addEventListener('beforeinput', e => {
     if (d === ' ') play('espacio'); else play('tecla');
     insert(d.replace(/\r/g, ''));
   } else if (t === 'insertLineBreak' || t === 'insertParagraph') newline();
-  else if (t === 'deleteContentBackward') { play('borrar', 0.8); backspace(); }
+  else if (t === 'deleteContentBackward') backspace();
 });
 iosIn.addEventListener('input', () => { iosIn.value = ''; });
 if (window.visualViewport) {
@@ -931,15 +824,15 @@ function printNote(n, name) {
   const rows = Math.floor((H - 2 * padT) / lh);
   const L = layout(n.text, cols);
   const k = EXP.tinta === 'limpia' ? 0 : (TINTA[V('tinta')] || 0.75) * 0.6;
-  const bg = V('papel') === 'hueso' || V('papel') === 'niebla' ? '#fff' : '';
+  const bg = '#fff';
   let html = '';
   for (let p = 0; p < Math.max(1, Math.ceil(L.length / rows)); p++) {
     let t = '';
     for (let r = p * rows; r < Math.min(L.length, (p + 1) * rows); r++) {
       t += '<div style="height:' + lh + 'mm;line-height:' + lh + 'mm">' +
-        (L[r].map(([ch, idx]) => ch === ' ' ? ' ' : (k ? `<span style="${jitter(idx, ch, k)}">${esc(ch)}</span>` : esc(ch))).join('') || ' ') + '</div>';
+        (L[r].map(([ch, idx]) => k ? cellHTML(n, ch, idx, k).replace('<span', `<span data-w`) : (ch === ' ' ? '<span data-w> </span>' : `<span data-w>${esc(ch)}</span>`)).join('') || ' ') + '</div>';
     }
-    html += `<div class="pr-page" style="width:${W}mm;height:${H}mm;${bg ? 'background:' + bg : ''}"><div class="pr-text" style="position:absolute;left:${W * padX}mm;top:${padT}mm;font-size:${fs}mm;font-weight:700">${t}</div></div>`;
+    html += `<div class="pr-page" style="width:${W}mm;height:${H}mm;${bg ? 'background:' + bg : ''}"><div class="pr-text" style="position:absolute;left:${W * padX}mm;top:${padT}mm;font-size:${fs}mm;--cw:${(fs * 0.6).toFixed(3)}mm;--lh:${lh}mm">${t}</div></div>`;
   }
   $('#printArea').innerHTML = html;
   $('#printPage').textContent = `@page{size:${EXP.size === 'a4' ? 'A4' : 'A5'};margin:0}`;
@@ -971,5 +864,5 @@ renderCaja(false);
   el.addEventListener('pointerdown', () => { tA.forEach(clearTimeout); finish('skip'); }, { once: true });
 })();
 if ('serviceWorker' in navigator && location.protocol === 'https:') navigator.serviceWorker.register('sw.js').catch(() => {});
-window.KLAK = { DB, openNote, insert, newline, setOverview, render };
+window.KLAK = { DB, openNote, insert, newline, backspace, setOverview, render, get back() { return back; } };
 })();

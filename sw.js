@@ -1,8 +1,10 @@
-/* Klak · service worker · versión 1.0.6 */
-const CACHE = 'klak-1.0.6';
+/* Klak · service worker · versión 1.1.0 */
+const CACHE = 'klak-1.1.0';
 const FILES = [
   './',
   './css/klak.css',
+  './css/klak-min.css',
+  './fonts/veteran.woff',
   './icons/icono_180.png',
   './icons/icono_192.png',
   './icons/icono_512.png',
