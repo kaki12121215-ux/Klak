@@ -1,8 +1,8 @@
 /* Klak · máquina de escribir para notas y diario
-   Versión 1.2.3 */
+   Versión 1.3.0 */
 (function () {
 'use strict';
-const VERSION = '1.2.3';
+const VERSION = '1.3.0';
 const $ = (s, r = document) => r.querySelector(s);
 const $$ = (s, r = document) => Array.from(r.querySelectorAll(s));
 const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
@@ -15,7 +15,7 @@ const fmt = n => n.toLocaleString('es-ES');
 const KEY = 'klak.data';
 const DEF_SET = {
   teclado: 'klak', hoja: 'a5', autocap: true, sonido: true, volumen: 0.7, campanilla: true, silencio: false,
-  fondo: 'claro', tinta: 'usada', teclas: 'crema', real: true,
+  fondo: 'claro', tinta: 'usada', teclas: 'crema', real: true, marg: { desk: 80, a5: 35, a4: 62 },
   lampAuto: false, lampOn: false
 };
 let DB = { notes: [], seps: [], settings: { ...DEF_SET } };
@@ -25,6 +25,7 @@ try {
 } catch (e) { console.warn('No se pudieron leer los datos', e); }
 if (!DB.seps.length && !localStorage.getItem(KEY)) DB.seps = [{ id: 's1', name: 'Diario' }, { id: 's2', name: 'Notas' }, { id: 's3', name: 'Ideas' }];
 const S = DB.settings;
+if (!S.marg) S.marg = { desk: 80, a5: 35, a4: 62 };
 // 1.2.0: teclados normales en 4 estilos; los antiguos pasan a Crema
 const KB_OK = ['claro', 'crema', 'grafito', 'contorno'];
 if (!KB_OK.includes(S.teclas)) S.teclas = 'crema';
@@ -254,7 +255,15 @@ function lookSheet(title, look, okLabel, onChange, onOk) {
     <div class="lk"><div class="lk-l">Fondo<i data-n="fondo">${FONDOS[look.fondo] || 'Claro'}</i></div>${dots('fondo', FONDOS, x => FONDO_COL[x])}</div>
     <div class="lk"><div class="lk-l">Teclado<i data-n="teclas">${TECLAS[look.teclas]}</i></div><div class="sws strip">${Object.keys(TECLAS).map(x => `<button data-lk="teclas" data-v="${x}" class="kbs kbs-${x} ${look.teclas === x ? 'on' : ''}" style="background:${TECLA_COL[x]}" aria-label="${TECLAS[x]}"></button>`).join('')}</div></div>
     <div class="lk row"><div class="lk-l">Tamaño</div><div class="seg"><i class="seg-pill"></i><button data-lk="hoja" data-v="a5" class="${look.hoja === 'a5' ? 'on' : ''}">A5</button><button data-lk="hoja" data-v="a4" class="${look.hoja === 'a4' ? 'on' : ''}">A4 con carro</button></div></div>
+    ${look.mk ? `<div class="lk"><div class="lk-l">Márgenes<i id="lkMn">${look.mc} letras por línea</i></div>
+      <div class="mg-row"><span class="mg-a">A</span><input type="range" class="mg" id="lkMarg" min="${MARG[look.mk][0]}" max="${MARG[look.mk][1]}" value="${look.mc}"><span class="mg-a big">A</span></div>
+      <div class="mg-sub"><span>${look.mk === 'a5' ? 'Menos letras, más grandes' : 'Menos letras'}</span><span>${look.mk === 'a5' ? 'Más letras, más pequeñas' : 'Más letras'}</span></div></div>` : ''}
     <button class="bigbtn" id="lkOk">${okLabel}</button>`);
+  const lm = $('#lkMarg', sheetUI);
+  if (lm) {
+    lm.oninput = () => { $('#lkMn', sheetUI).textContent = lm.value + ' letras por línea'; };
+    lm.onchange = () => { look.marg = look.marg || {}; look.marg[look.mk] = +lm.value; look.mc = +lm.value; play('tecla', 0.3); if (onChange) onChange(); };
+  }
   const NM = { fondo: FONDOS, teclas: TECLAS };
   $$('[data-lk]', sheetUI).forEach(b => b.onclick = () => {
     const k = b.dataset.lk; look[k] = b.dataset.v;
@@ -309,6 +318,8 @@ function renderAjustes() {
   <div class="sr"><span>Volumen</span>${rng('volumen', 0.1, 1, 0.05)}</div>
   <div class="sr"><span>Campanilla al final de línea</span>${tog('campanilla')}</div>
   <div class="sr"><span>Sonar con el móvil en silencio</span>${tog('silencio')}</div>
+  ${Object.keys(MARG).map((k, i) => `${i === 0 ? '<div class="sg">Márgenes</div>' : ''}<div class="sr"><span>${MARG[k][2]}<small>${k === 'desk' ? 'Hoja ancha, escribiendo con tu teclado' : k === 'a5' ? 'Más letras por línea = letra más pequeña' : 'La hoja se mueve con el carro'}</small></span><div class="mg-set"><input type="range" class="mg" data-mg="${k}" min="${MARG[k][0]}" max="${MARG[k][1]}" value="${S.marg[k]}"><b data-mgn="${k}">${S.marg[k]} letras</b></div></div>`).join('')}
+  <div class="sr" style="border:0;padding-top:4px"><span><small style="margin:0">En cada hoja también puedes arrastrar los topes de la barra (doble clic en un tope lo deja como aquí).</small></span><span></span></div>
   <div class="sg">Hojas nuevas</div>
   <p class="sg-n">Cada hoja guarda su aspecto. Esto es lo que trae una hoja recién creada.</p>
   <div class="sr"><span>Fondo</span><div class="sws strip">${Object.keys(FONDOS).map(x => `<button data-fo="${x}" class="${S.fondo === x ? 'on' : ''}" style="background:${FONDO_COL[x]}" aria-label="${FONDOS[x]}"></button>`).join('')}</div></div>
@@ -327,6 +338,10 @@ function renderAjustes() {
   $$('[data-k]', B).forEach(b => b.onclick = () => { S[b.dataset.k] = b.dataset.v; save(); applyLook(); segPick(b); });
   $$('[data-t]', B).forEach(b => b.onclick = () => { S[b.dataset.t] = !S[b.dataset.t]; b.classList.toggle('on', S[b.dataset.t]); save(); audioUnlock(); if (b.dataset.t === 'lampOn') applyLook(); });
   $$('[data-r]', B).forEach(r => r.oninput = () => { S[r.dataset.r] = +r.value; save(); applyLook(); if (r.dataset.r === 'volumen') { audioUnlock(); play('tecla'); } });
+  $$('[data-mg]', B).forEach(r => {
+    r.oninput = () => { $(`[data-mgn="${r.dataset.mg}"]`, B).textContent = r.value + ' letras'; };
+    r.onchange = () => { S.marg[r.dataset.mg] = +r.value; save(); };
+  });
   $$('[data-fo]', B).forEach(b => b.onclick = () => { S.fondo = b.dataset.fo; save(); applyLook(); $$('[data-fo]', B).forEach(x => x.classList.toggle('on', x === b)); });
   $$('[data-tk]', B).forEach(b => b.onclick = () => { S.teclas = b.dataset.tk; save(); applyLook(); $$('[data-tk]', B).forEach(x => x.classList.toggle('on', x === b)); });
   $$('.seg', B).forEach(sg => placePill(sg));
@@ -362,18 +377,27 @@ let back = 0; // modo máquina real: cuántas letras ha retrocedido el carro en 
 const edZone = $('#edZone'), edScroll = $('#edScroll'), edSheets = $('#edSheets');
 const edHead = $('#edHead'), edBar = $('#edBar'), edLight = $('#edLight');
 
+/* márgenes: letras por línea de cada tipo de hoja; cada hoja puede tener los suyos */
+const MARG = { desk: [40, 130, 'Ordenador'], a5: [26, 52, 'Móvil · A5'], a4: [40, 90, 'A4 con carro'] };
+function margKind() { return V('hoja') === 'a4' ? 'a4' : (DESK && (edZone.clientWidth || innerWidth) > 700 ? 'desk' : 'a5'); }
+function colsFor(kind, n = note) {
+  const v = n && n.look && n.look.marg && n.look.marg[kind];
+  const [lo, hi] = MARG[kind];
+  return Math.max(lo, Math.min(hi, Math.round(v || S.marg[kind] || 35)));
+}
 function measure() {
   const f = { ...(FMT[V('hoja')] || FMT.a5) };
   const zw = edZone.clientWidth || window.innerWidth, zh = edZone.clientHeight || 400;
   let w, fs;
-  if (V('hoja') === 'a4') { fs = f.fs; w = f.cols * 0.6 * fs / (1 - 2 * f.padX); }
-  else if (DESK && zw > 700) { f.cols = 64; fs = Math.min(22, (zw - 80) * (1 - 2 * f.padX) / (f.cols * 0.6)); w = f.cols * 0.6 * fs / (1 - 2 * f.padX); }
+  const kind = margKind(); f.cols = colsFor(kind);
+  if (kind === 'a4') { fs = f.fs; w = f.cols * 0.6 * fs / (1 - 2 * f.padX); }
+  else if (kind === 'desk') { fs = Math.min(22, (zw - 60) * (1 - 2 * f.padX) / (f.cols * 0.6)); w = f.cols * 0.6 * fs / (1 - 2 * f.padX); }
   else { w = Math.min(zw - 20, 560); fs = w * (1 - 2 * f.padX) / (f.cols * 0.6); }
   const h = w * f.ratio, lh = fs * f.lh, padT = w * f.padY, padL = w * f.padX;
   const rows = Math.max(8, Math.floor((h - 2 * padT) / lh));
   // la barra: en el ordenador deja folio por debajo; en el móvil, pegada al teclado
   const barY = DESK ? Math.round(zh - Math.max(60, zh * 0.1)) : Math.round(zh - 22);
-  G = { ...f, mode: V('hoja'), w, h, fs, lh, padT, padL, rows, cw: fs * 0.6, zw, zh, barY };
+  G = { ...f, kind, mode: V('hoja'), w, h, fs, lh, padT, padL, rows, cw: fs * 0.6, zw, zh, barY };
   edSheets.classList.toggle('carro', V('hoja') === 'a4' && !overview);
   edSheets.style.width = V('hoja') === 'a4' ? w + 'px' : '100%';
   edSheets.style.padding = overview ? '14px 0 40px' : `${zh}px 0 ${zh}px`;
@@ -474,9 +498,74 @@ function place(retorno) {
     edSheets.style.transform = 'none';
     px = (G.zw - G.w) / 2 + caretX;
   }
+  placeStops(G.mode === 'a4' ? px - caretX + G.padL : (G.zw - G.w) / 2 + G.padL, !!retorno);
   edHead.classList.toggle('ret', !!retorno); edLight.classList.toggle('ret', !!retorno);
   edHead.style.transform = edLight.style.transform = `translateX(${px.toFixed(1)}px)`;
 }
+/* topes de margen en la barra: se arrastran para cambiar las letras por línea */
+const stopL = $('#stopL'), stopR = $('#stopR');
+let stopDrag = null;
+function placeStops(left, ret) {
+  if (!G || stopDrag) return;
+  [stopL, stopR].forEach(s => s.classList.toggle('ret', ret));
+  stopL.style.transform = `translateX(${left.toFixed(1)}px)`;
+  stopR.style.transform = `translateX(${(left + G.cols * G.cw).toFixed(1)}px)`;
+}
+function stopDown(e) {
+  if (!note || overview || !G) return;
+  e.preventDefault(); e.stopPropagation();
+  const right = e.currentTarget === stopR;
+  e.currentTarget.setPointerCapture(e.pointerId);
+  const left0 = parseFloat(stopL.style.transform.replace(/[^\d.-]/g, '')) || 0;
+  stopDrag = { x0: e.clientX, cols0: G.cols, right, left0, cw: G.cw, cols: G.cols };
+  edZone.classList.add('marg');
+  play('mayus', 0.4);
+  showStopTip();
+}
+function stopMove(e) {
+  if (!stopDrag) return;
+  const d = stopDrag, [lo, hi] = MARG[G.kind];
+  const dx = (e.clientX - d.x0) * (d.right ? 1 : -1);
+  // en el ordenador y en A4 la letra no cambia: el tope sigue al dedo; en el móvil, cada 7 px es una letra
+  const per = G.kind === 'a5' ? 7 : d.cw / 2;
+  const c = Math.max(lo, Math.min(hi, Math.round(d.cols0 + dx / per)));
+  if (c !== d.cols) { d.cols = c; play('tecla', 0.25); }
+  const w = c * d.cw, mid = d.left0 + d.cols0 * d.cw / 2;
+  const L = G.kind === 'a5' ? d.left0 : mid - w / 2, R = G.kind === 'a5' ? d.left0 + d.cols0 * d.cw : mid + w / 2;
+  stopL.style.transform = `translateX(${(G.kind === 'a5' ? d.left0 - (c - d.cols0) * 2 : L).toFixed(1)}px)`;
+  stopR.style.transform = `translateX(${(G.kind === 'a5' ? R + (c - d.cols0) * 2 : R).toFixed(1)}px)`;
+  showStopTip();
+}
+function stopUp() {
+  if (!stopDrag) return;
+  const c = stopDrag.cols, changed = c !== stopDrag.cols0;
+  stopDrag = null; edZone.classList.remove('marg'); $('#stopTip').classList.remove('on');
+  if (changed) setCols(c);
+  else place();
+}
+function setCols(c) {
+  if (!note) return;
+  if (!note.look) note.look = { fondo: S.fondo, teclas: S.teclas, hoja: S.hoja };
+  if (!note.look.marg) note.look.marg = {};
+  note.look.marg[G.kind] = c;
+  note.updated = Date.now(); save();
+  measure(); render(true); edScroll.scrollTop = edScroll.scrollHeight; place();
+}
+function showStopTip() {
+  const t = $('#stopTip'), c = stopDrag ? stopDrag.cols : G.cols;
+  t.textContent = `${c} letras por línea`; t.classList.add('on');
+  const r = stopR.getBoundingClientRect(), z = edZone.getBoundingClientRect();
+  t.style.left = Math.min(z.width - 90, Math.max(90, r.left - z.left)) + 'px';
+  $('#stopGuideL').style.transform = stopL.style.transform; $('#stopGuideR').style.transform = stopR.style.transform;
+}
+[stopL, stopR].forEach(s => {
+  s.addEventListener('pointerdown', stopDown);
+  s.addEventListener('pointermove', stopMove);
+  s.addEventListener('pointerup', stopUp);
+  s.addEventListener('pointercancel', stopUp);
+  s.addEventListener('dblclick', e => { e.stopPropagation(); if (note.look && note.look.marg) delete note.look.marg[G.kind]; save(); measure(); render(true); place(); hint(`${G.cols} letras por línea`); });
+});
+
 let hitT = null;
 function strike() {
   if (overview || !G) return;
@@ -592,6 +681,7 @@ $('#btnAspecto').onclick = () => {
   if (!note) return;
   if (!note.look) note.look = { fondo: S.fondo, teclas: S.teclas, hoja: S.hoja };
   if (!note.look.fondo) note.look.fondo = S.fondo;
+  note.look.mk = G ? G.kind : margKind(); note.look.mc = colsFor(note.look.mk);
   lookSheet('Aspecto de esta hoja', note.look, 'Listo', () => { applyLook(); measure(); render(true); edScroll.scrollTop = edScroll.scrollHeight; place(); save(); });
 };
 
