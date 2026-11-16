@@ -1,8 +1,8 @@
 /* Klak · máquina de escribir para notas y diario
-   Versión 1.2.2 */
+   Versión 1.2.3 */
 (function () {
 'use strict';
-const VERSION = '1.2.2';
+const VERSION = '1.2.3';
 const $ = (s, r = document) => r.querySelector(s);
 const $$ = (s, r = document) => Array.from(r.querySelectorAll(s));
 const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
@@ -846,7 +846,9 @@ function printNote(n, name) {
   const rows = Math.floor((H - 2 * padT) / lh);
   const L = layout(n.text, cols);
   const k = EXP.tinta === 'limpia' ? 0 : (TINTA[V('tinta')] || 0.75) * 0.6;
-  const bg = '#fff';
+  // el PDF sale con el color de la hoja: claro, crema o noche
+  const bg = S.lampOn ? '#131216' : (V('fondo') === 'crema' ? '#EFE6D2' : '#E4E5EC');
+  const ink = S.lampOn ? '#EADFC8' : '#1d1a17';
   let html = '';
   for (let p = 0; p < Math.max(1, Math.ceil(L.length / rows)); p++) {
     let t = '';
@@ -854,7 +856,7 @@ function printNote(n, name) {
       t += '<div style="height:' + lh + 'mm;line-height:' + lh + 'mm">' +
         (L[r].map(([ch, idx]) => k ? cellHTML(n, ch, idx, k).replace('<span', `<span data-w`) : (ch === ' ' ? '<span data-w> </span>' : `<span data-w>${esc(ch)}</span>`)).join('') || ' ') + '</div>';
     }
-    html += `<div class="pr-page" style="width:${W}mm;height:${H}mm;${bg ? 'background:' + bg : ''}"><div class="pr-text" style="position:absolute;left:${W * padX}mm;top:${padT}mm;font-size:${fs}mm;--cw:${(fs * 0.6).toFixed(3)}mm;--lh:${lh}mm">${t}</div></div>`;
+    html += `<div class="pr-page" style="width:${W}mm;height:${H}mm;${bg ? 'background:' + bg : ''}"><div class="pr-text" style="position:absolute;left:${W * padX}mm;top:${padT}mm;font-size:${fs}mm;color:${ink};--cw:${(fs * 0.6).toFixed(3)}mm;--lh:${lh}mm">${t}</div></div>`;
   }
   $('#printArea').innerHTML = html;
   $('#printPage').textContent = `@page{size:${EXP.size === 'a4' ? 'A4' : 'A5'};margin:0}`;

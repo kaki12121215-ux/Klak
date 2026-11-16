@@ -183,6 +183,17 @@ html:has(#vEditor.active.kb-grafito),html:has(#vEditor.active.kb-grafito) body{b
 @media print{
   .pr-text{font-family:'Veteran','Courier New',monospace !important;font-weight:400 !important;color:#1d1a17}
   .pr-text span[data-w]{display:inline-block;width:var(--cw);text-align:center}
+  html,body,html:has(#vEditor.active) body{background:none !important}
+  .pr-page{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  /* golpes encima: mismo color de tinta, más negro cuantos más golpes */
+  .pr-text .ov,.pr-text .ov.o2,.pr-text .ov.o3,.pr-text .ov.o4{color:inherit !important}
+  .pr-text .ov b{opacity:1 !important}
+  .pr-text .ov.o2 b{-webkit-text-stroke:.12mm currentColor}
+  .pr-text .ov.o3 b{-webkit-text-stroke:.2mm currentColor}
+  .pr-text .ov.o4 b{-webkit-text-stroke:.3mm currentColor}
 }
-.prev{background:#fff !important}
+.prev{background:#E4E5EC !important}
+body.f-crema .prev{background:#EFE6D2 !important}
+body.noche .prev{background:#131216 !important}
+body.noche .prev div{color:#EADFC8}
 body.desk .sheet-ui{left:50%;right:auto;width:540px;margin-left:-270px}
