@@ -1,8 +1,8 @@
 /* Klak · máquina de escribir para notas y diario
-   Versión 1.2.1 */
+   Versión 1.2.2 */
 (function () {
 'use strict';
-const VERSION = '1.2.1';
+const VERSION = '1.2.2';
 const $ = (s, r = document) => r.querySelector(s);
 const $$ = (s, r = document) => Array.from(r.querySelectorAll(s));
 const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
@@ -573,7 +573,7 @@ function openNote(id, isNew) {
     measure(); render(true);
     edScroll.scrollTop = edScroll.scrollHeight; place();
     if (isNew) { play('cargar_hoja', 0.9); }
-    if (S.teclado === 'ios') focusIOS();
+    if (S.teclado === 'ios' || DESK) focusIOS();
   });
 }
 function closeNote() {
@@ -634,7 +634,7 @@ let lastTap = 0;
 edZone.addEventListener('pointerup', e => {
   const now = Date.now();
   if (now - lastTap < 320) { setOverview(!overview); lastTap = 0; } else lastTap = now;
-  if (S.teclado === 'ios' && !overview) focusIOS();
+  if ((S.teclado === 'ios' || DESK) && !overview) focusIOS();
 });
 edZone.addEventListener('gesturestart', e => e.preventDefault());
 edZone.addEventListener('gestureend', e => { if (e.scale < 0.85 && !overview) setOverview(true); else if (e.scale > 1.15 && overview) setOverview(false); });
@@ -756,34 +756,54 @@ kbRows.addEventListener('pointerup', e => keyUp(e, false));
 kbRows.addEventListener('pointercancel', e => keyUp(e, true));
 kbRows.addEventListener('contextmenu', e => e.preventDefault());
 
-/* teclado físico (iPad, Mac) */
+/* teclado físico (ordenador, iPad).
+   En el ordenador se escribe a través de un campo oculto, así el sistema compone las tildes
+   (´ + e = é, ¨ + u = ü, ~ + n = ñ) y las teclas especiales se atienden aquí. */
 document.addEventListener('keydown', e => {
   if (current !== 'vEditor' || !note || sheetUI.classList.contains('on')) return;
-  if (document.activeElement && document.activeElement.id === 'iosInput') return;
-  if (e.metaKey || e.ctrlKey || e.altKey && e.key.length !== 1) return;
-  if (e.key === 'Dead') return;
-  if (e.key === 'Escape') { e.preventDefault(); if (overview) setOverview(false); else closeNote(); }
-  else if (e.key === 'Backspace') { e.preventDefault(); backspace(); }
+  const inField = document.activeElement && document.activeElement.id === 'iosInput';
+  if (e.isComposing || e.key === 'Process' || e.key === 'Dead') return;
+  if (e.key === 'Escape') { e.preventDefault(); if (overview) setOverview(false); else closeNote(); return; }
+  if (inField && !DESK) return;
+  if (e.metaKey || e.ctrlKey) return;
+  if (e.key === 'Backspace') { e.preventDefault(); backspace(); }
   else if (e.key === 'Enter') { e.preventDefault(); newline(); }
+  else if (inField) return; // las letras llegan por el campo oculto, ya compuestas
+  else if (e.altKey && e.key.length !== 1) return;
   else if (e.key === ' ') { e.preventDefault(); play('espacio'); insert(' ', { raw: true }); }
   else if (e.key.length === 1) { e.preventDefault(); play('tecla'); insert(e.key, { raw: true }); }
 });
+// si se pierde el foco (clic en otra parte), vuelve al campo oculto
+window.addEventListener('focus', () => { if (DESK && current === 'vEditor' && note && !sheetUI.classList.contains('on')) focusIOS(); });
 
-/* teclado de iOS */
+/* campo oculto: teclado de iOS y teclado del ordenador */
 const iosIn = $('#iosInput');
 function focusIOS() { iosIn.value = ''; iosIn.focus({ preventScroll: true }); }
+function typed(d) {
+  if (!d || current !== 'vEditor' || !note || sheetUI.classList.contains('on')) return;
+  for (const ch of d.replace(/\r/g, '')) {
+    if (ch === '\n') { newline(); continue; }
+    play(ch === ' ' ? 'espacio' : 'tecla');
+    insert(ch, { raw: DESK });
+  }
+}
 iosIn.addEventListener('beforeinput', e => {
-  e.preventDefault();
   const t = e.inputType;
+  if (t === 'insertCompositionText' || t === 'deleteCompositionText' || t === 'insertFromComposition') return; // tildes a medio componer
+  e.preventDefault();
   if (t === 'insertText' || t === 'insertReplacementText' || t === 'insertFromPaste') {
     const d = e.data || (e.dataTransfer && e.dataTransfer.getData('text/plain')) || '';
-    if (!d) return;
-    if (d === ' ') play('espacio'); else play('tecla');
-    insert(d.replace(/\r/g, ''));
-  } else if (t === 'insertLineBreak' || t === 'insertParagraph') newline();
-  else if (t === 'deleteContentBackward') backspace();
+    if (t === 'insertFromPaste' && d.length > 1) { play('tecla'); insert(d.replace(/\r/g, ''), { raw: true }); }
+    else typed(d);
+  } else if (!DESK && (t === 'insertLineBreak' || t === 'insertParagraph')) newline();
+  else if (!DESK && t === 'deleteContentBackward') backspace();
 });
-iosIn.addEventListener('input', () => { iosIn.value = ''; });
+iosIn.addEventListener('compositionend', e => {
+  const d = e.data || iosIn.value;
+  iosIn.value = '';
+  typed(d);
+});
+iosIn.addEventListener('input', e => { if (!e.isComposing) iosIn.value = ''; });
 if (window.visualViewport) {
   visualViewport.addEventListener('resize', () => {
     if (current !== 'vEditor' || S.teclado !== 'ios') { $('#vEditor').style.height = ''; return; }
