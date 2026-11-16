@@ -1,8 +1,8 @@
 /* Klak · máquina de escribir para notas y diario
-   Versión 1.1.0 */
+   Versión 1.1.1 */
 (function () {
 'use strict';
-const VERSION = '1.1.0';
+const VERSION = '1.1.1';
 const $ = (s, r = document) => r.querySelector(s);
 const $$ = (s, r = document) => Array.from(r.querySelectorAll(s));
 const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
@@ -141,7 +141,7 @@ function applyLook() {
 }
 function setUnit() {
   const w = Math.min(window.innerWidth, 560);
-  const u = Math.max(28, Math.min(48, Math.floor((w - 12 - 18) / 10)));
+  const u = Math.max(30, Math.min(52, Math.floor((w - 6) / 10)));
   document.documentElement.style.setProperty('--u', u + 'px');
 }
 setUnit();

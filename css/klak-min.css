@@ -133,10 +133,14 @@ body:not(.desk) .eh-light{left:-700px;width:1400px}
 .ed-zone{z-index:1}
 .ed-scroll{z-index:3}
 
-/* teclado de máquina, con letras más grandes en Veteran */
-.ed-kb{z-index:8}
-.k b{font-family:'Veteran','Courier New',monospace !important;font-weight:400 !important;font-size:calc(var(--u) * .66) !important}
-.k.w b{font-family:'Inter',sans-serif !important;font-weight:600 !important;font-size:calc(var(--u) * .22) !important;letter-spacing:.6px}
+/* teclado de máquina: teclas grandes que llenan el ancho, letras en Veteran */
+.ed-kb{z-index:8;padding:16px 3px calc(var(--safeB) + 10px)}
+.krow{gap:0;height:calc(var(--u) * 1.42)}
+.k::before{width:calc(var(--u) * 1.1);height:calc(var(--u) * 1.1);margin:calc(var(--u) * -.55) 0 0 calc(var(--u) * -.55)}
+.k.w::before{height:calc(var(--u) * 1.02);margin:calc(var(--u) * -.51) 0 0}
+.k.sp::before{height:calc(var(--u) * .7);margin:calc(var(--u) * -.35) 0 0}
+.k b{font-family:'Veteran','Courier New',monospace !important;font-weight:400 !important;font-size:calc(var(--u) * .74) !important}
+.k.w b{font-family:'Inter',sans-serif !important;font-weight:600 !important;font-size:calc(var(--u) * .23) !important;letter-spacing:.3px}
 .accent-pop b{font-family:'Veteran',monospace}
 
 /* animación de inicio, sobre el fondo claro */
