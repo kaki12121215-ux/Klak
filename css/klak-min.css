@@ -134,16 +134,23 @@ body:not(.desk) .eh-light{left:-700px;width:1400px}
 .ed-scroll{z-index:3}
 
 /* teclado normal estilizado, 4 estilos: claro, crema, grafito, contorno */
-#vEditor{--kbBg:linear-gradient(180deg,#E2DBCB,#D6CEBC);--kF:linear-gradient(180deg,#FBF7EE,#EFE8D8);--kS:linear-gradient(180deg,#CFC6B2,#C3BAA5);
+#vEditor{--kbSolid:#D6CEBC;--kbBg:linear-gradient(180deg,#E2DBCB,#D6CEBC);--kF:linear-gradient(180deg,#FBF7EE,#EFE8D8);--kS:linear-gradient(180deg,#CFC6B2,#C3BAA5);
   --kD:linear-gradient(180deg,#FFE8B8,#F3D493);--kI:#2E2820;--kSh:0 2px 0 #A89F8A,0 3px 5px rgba(60,40,10,.12),inset 0 1px 0 #fff;--kR:9px}
-#vEditor.kb-claro{--kbBg:linear-gradient(180deg,#D3D4DB,#C9CAD2);--kF:linear-gradient(180deg,#fff,#F4F4F7);--kS:linear-gradient(180deg,#B9BAC3,#AFB0BA);
+#vEditor.kb-claro{--kbSolid:#C9CAD2;--kbBg:linear-gradient(180deg,#D3D4DB,#C9CAD2);--kF:linear-gradient(180deg,#fff,#F4F4F7);--kS:linear-gradient(180deg,#B9BAC3,#AFB0BA);
   --kD:linear-gradient(180deg,#FFF1D2,#F6E2B8);--kI:#2B292E;--kSh:0 1.5px 0 #8E8F98,0 2px 3px rgba(0,0,0,.08);--kR:8px}
-#vEditor.kb-grafito{--kbBg:linear-gradient(180deg,#2A292E,#1F1E23);--kF:linear-gradient(180deg,#4A4950,#3E3D44);--kS:linear-gradient(180deg,#323137,#2A292F);
+#vEditor.kb-grafito{--kbSolid:#1F1E23;--kbBg:linear-gradient(180deg,#2A292E,#1F1E23);--kF:linear-gradient(180deg,#4A4950,#3E3D44);--kS:linear-gradient(180deg,#323137,#2A292F);
   --kD:linear-gradient(180deg,#6B5A3A,#5A4A2E);--kI:#EFE9DE;--kSh:0 1.5px 0 #141317,0 2px 4px rgba(0,0,0,.35),inset 0 1px 0 rgba(255,255,255,.08);--kR:8px}
-#vEditor.kb-contorno{--kbBg:transparent;--kF:rgba(255,255,255,.55);--kS:rgba(255,255,255,.25);--kD:rgba(255,236,190,.9);--kI:var(--ink);--kSh:0 0 0 1px var(--hair),0 0 0 1px rgba(43,41,46,.08);--kR:10px}
+#vEditor.kb-contorno{--kbSolid:transparent;--kbBg:transparent;--kF:rgba(255,255,255,.55);--kS:rgba(255,255,255,.25);--kD:rgba(255,236,190,.9);--kI:var(--ink);--kSh:0 0 0 1px var(--hair),0 0 0 1px rgba(43,41,46,.08);--kR:10px}
 body.noche #vEditor.kb-contorno{--kF:rgba(255,255,255,.06);--kS:rgba(255,255,255,.03);--kD:rgba(255,206,140,.3)}
 .kb-plate{display:none !important}
-.ed-kb{z-index:8;padding:10px 3px calc(var(--safeB) + 6px);background:var(--kbBg)}
+.ed-kb{z-index:8;padding:10px 3px calc(var(--safeB) + 8px);background:var(--kbBg);box-shadow:0 300px 0 300px var(--kbSolid)}
+/* el teclado llega hasta el borde de abajo de la pantalla */
+#vEditor{background-color:var(--bg)}
+html:has(body.f-crema),html:has(body.f-crema) body{background:#EFE6D2}
+html:has(body.noche),html:has(body.noche) body{background:#131216}
+html:has(#vEditor.active.kb-crema),html:has(#vEditor.active.kb-crema) body{background:#D6CEBC}
+html:has(#vEditor.active.kb-claro),html:has(#vEditor.active.kb-claro) body{background:#C9CAD2}
+html:has(#vEditor.active.kb-grafito),html:has(#vEditor.active.kb-grafito) body{background:#1F1E23}
 .kb-rows{max-width:560px}
 .krow{gap:6px;height:calc(var(--u) * 1.24 + 11px);align-items:center}
 .k{height:calc(var(--u) * 1.24)}
