@@ -227,3 +227,7 @@ input.mg::-moz-range-thumb{width:18px;height:18px;border:0;border-radius:4px;bac
 body:not(.desk) .mstop{top:calc(var(--barY,80%) - 11px)}
 body:not(.desk) .mstop i{height:8px;top:0}
 body:not(.desk) .mstop b{top:7px;height:4px}
+
+/* retorno lento: lo escrito aparece cuando pasa el cacharrito */
+.late{opacity:0}
+.late.on{opacity:1}

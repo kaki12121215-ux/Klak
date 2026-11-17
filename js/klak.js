@@ -1,8 +1,8 @@
 /* Klak · máquina de escribir para notas y diario
-   Versión 1.3.0 */
+   Versión 1.3.1 */
 (function () {
 'use strict';
-const VERSION = '1.3.0';
+const VERSION = '1.3.1';
 const $ = (s, r = document) => r.querySelector(s);
 const $$ = (s, r = document) => Array.from(r.querySelectorAll(s));
 const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
@@ -439,17 +439,31 @@ function cellHTML(n, ch, idx, k) {
   const g = Math.min(4, all.length);
   return `<span class="ov o${g}">` + all.map((c, j) => `<b style="${jitter(idx * 7 + j * 131 + 3, c, Math.max(k, 0.5))}">${esc(c)}</b>`).join('') + '</span>';
 }
-function lineHTML(arr, k) {
+function lineHTML(arr, k, last) {
   let s = '';
-  for (const [ch, idx] of arr) s += cellHTML(note, ch, idx, k);
+  const wait = last && retInfo && performance.now() < retInfo.t0 + 1330;
+  for (const [ch, idx] of arr) {
+    const c = cellHTML(note, ch, idx, k);
+    // durante el retorno lento, la letra espera a que el cacharrito pase por encima
+    s += wait && ch !== ' ' ? `<span class="late">${c}</span>` : c;
+  }
   return `<div class="ed-line">${s || ' '}</div>`;
 }
-
+let lateT = 0;
+/* al terminar el retorno, aparece lo escrito mientras volvía y el cacharrito se pone a su altura */
+function revealLate() {
+  clearTimeout(lateT);
+  if (!edSheets.querySelector('.late:not(.on)')) return;
+  const left = retInfo ? retInfo.t0 + 1340 - performance.now() : 0;
+  if (left > 0) { lateT = setTimeout(revealLate, left); return; }
+  edSheets.querySelectorAll('.late').forEach(x => x.classList.add('on'));
+  if (!overview && G) place();
+}
 function render(full) {
   if (!note || !G) return;
-  const prevLen = lines.length;
+  const prevLen = lines.length, prevCol = caret.col;
   lines = layout(note.text, G.cols);
-  if (!full && prevLen && lines.length > prevLen) retUntil = performance.now() + 1350;
+  if (!full && prevLen && lines.length > prevLen) { retUntil = performance.now() + 1330; retInfo = { t0: performance.now(), from: Math.max(1, prevCol) }; }
   const lastLen = lines[lines.length - 1].length;
   if (back > lastLen) back = lastLen;
   caret = { line: lines.length - 1, col: lastLen - back };
@@ -468,7 +482,7 @@ function render(full) {
   }
   for (let p = 0; p < pages; p++) {
     let h = '';
-    for (let r = p * G.rows; r < Math.min(lines.length, (p + 1) * G.rows); r++) h += lineHTML(lines[r], k);
+    for (let r = p * G.rows; r < Math.min(lines.length, (p + 1) * G.rows); r++) h += lineHTML(lines[r], k, r === lines.length - 1);
     if (pageHTML[p] !== h) { edSheets.children[p].firstChild.innerHTML = h; pageHTML[p] = h; }
   }
   // contador
@@ -476,28 +490,38 @@ function render(full) {
   let used = 0; for (let r = cp * G.rows; r < Math.min(lines.length, (cp + 1) * G.rows); r++) used += lines[r].length;
   $('#edCount').innerHTML = overview ? '<span>Hoja entera</span>' : `<span>Hoja ${cp + 1}</span><i></i><span>${fmt(used)} de ${fmt(G.cols * G.rows)}</span>`;
   if (!overview) place();
+  revealLate();
 }
 
-let scrollAnim = null, retUntil = 0;
+let scrollAnim = null, retUntil = 0, retInfo = null;
 function place(retorno) {
-  if (retorno) retUntil = performance.now() + 1350;
+  if (retorno) retUntil = performance.now() + 1330;
   retorno = performance.now() < retUntil;
   const cp = Math.floor(caret.line / G.rows), row = caret.line % G.rows;
   const sheet = edSheets.children[cp]; if (!sheet) return;
   const lineTop = sheet.offsetTop + G.padT + row * G.lh;
   // el renglón que se escribe queda justo encima de la barra
   const target = Math.max(0, lineTop + G.lh - (G.barY - Math.round(G.fs * 1.15)));
-  smoothScroll(target, retorno ? 460 : 140);
-  const caretX = G.padL + (caret.col + 0.5) * G.cw;
+  smoothScroll(target, retorno ? 220 : 140);
+  // mientras vuelve el carro, va hasta el principio de la línea; luego sigue a lo escrito
+  const caretX = G.padL + ((retorno && retInfo && performance.now() < retInfo.t0 + 1330 ? 0 : caret.col) + 0.5) * G.cw;
   let px;
   if (G.mode === 'a4') {
-    px = G.zw * 0.5;
+    px = DESK && G.zw > 700 ? G.zw * 0.5 : Math.min(G.zw - 34, G.zw * 0.78);
     edSheets.classList.toggle('ret', !!retorno);
     edSheets.style.transform = `translateX(${(px - caretX).toFixed(1)}px)`;
   } else {
     edSheets.style.transform = 'none';
     px = (G.zw - G.w) / 2 + caretX;
   }
+  // durante el retorno, cada tecla no reinicia el viaje: el carro llega a la vez que estaba previsto
+  const now = performance.now(), t0 = retInfo ? retInfo.t0 : now;
+  const rem = retorno ? Math.max(120, t0 + 1330 - now) : 0, del = retorno ? Math.max(0, t0 + 80 - now) : 0;
+  [edHead, edLight, edSheets, stopL, stopR].forEach(el => {
+    el.style.transitionDuration = retorno ? rem + 'ms' : '';
+    el.style.transitionDelay = retorno ? del + 'ms' : '';
+    el.style.transitionTimingFunction = retorno && now > t0 + 100 ? 'cubic-bezier(.2,.4,.3,1)' : '';
+  });
   placeStops(G.mode === 'a4' ? px - caretX + G.padL : (G.zw - G.w) / 2 + G.padL, !!retorno);
   edHead.classList.toggle('ret', !!retorno); edLight.classList.toggle('ret', !!retorno);
   edHead.style.transform = edLight.style.transform = `translateX(${px.toFixed(1)}px)`;
@@ -626,6 +650,7 @@ function newline() {
   play('retorno');
   back = 0;
   const before = Math.ceil(lines.length / G.rows);
+  retInfo = { t0: performance.now(), from: Math.max(1, caret.col) };
   note.text += '\n'; note.updated = Date.now();
   render(); place(true);
   if (Math.ceil(lines.length / G.rows) > before) setTimeout(() => play('cargar_hoja', 0.9), 250);
